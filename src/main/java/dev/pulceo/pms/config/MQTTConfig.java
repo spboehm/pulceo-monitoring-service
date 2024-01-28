@@ -8,14 +8,23 @@ import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.core.MessageProducer;
 import org.springframework.integration.mqtt.inbound.MqttPahoMessageDrivenChannelAdapter;
 import org.springframework.integration.mqtt.support.DefaultPahoMessageConverter;
+import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
+
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 @Configuration
 public class MQTTConfig {
 
     @Value("${pms.mqtt.client.id}")
     private String mqttClientId;
+
+    @Bean
+    public BlockingQueue<Message<?>> mqttBlockingQueue() {
+        return new LinkedBlockingQueue<>();
+    }
 
     /* Inbound */
     @Bean
@@ -39,8 +48,12 @@ public class MQTTConfig {
     @Bean
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public MessageHandler handler() {
-        return message -> System.out.println(message.getPayload().toString());
+        return message -> {
+            try {
+                mqttBlockingQueue().put(message);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
     }
-
-
 }

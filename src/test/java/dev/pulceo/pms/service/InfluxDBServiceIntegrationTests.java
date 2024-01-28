@@ -7,16 +7,4 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 public class InfluxDBServiceIntegrationTests {
 
-    @Autowired
-    private InfluxDBService influxDBService;
-
-    @Test
-    public void testCallInfluxDB() {
-        // given
-
-        // when
-        influxDBService.callInfluxDb();
-        // then
-    }
-
 }

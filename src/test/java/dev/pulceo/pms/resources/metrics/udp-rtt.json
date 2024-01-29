@@ -1,0 +1,25 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "6cc6c101-b632-4a0c-b4d4-a5ad2a208c31",
+    "jobUUID": "da409089-5605-43ff-8eba-6e7ce7038d52",
+    "metricType": "UDP_RTT",
+    "metricResult": {
+      "sourceHost": "127.0.0.1",
+      "destinationHost": "127.0.0.1",
+      "startTime": "2024-01-29T09:06:56.679421866Z",
+      "endTime": "2024-01-29T09:06:56.686175106Z",
+      "dataLength": 4,
+      "npingUDPDelayMeasurement": {
+        "uuid": "3883095f-1366-4b3a-b5ff-cfa6ec8a110d",
+        "maxRTT": 0.897,
+        "minRTT": 0.897,
+        "avgRTT": 0.897,
+        "udpPacketsSent": 1,
+        "udpReceivedPackets": 1,
+        "udpLostPacketsAbsolute": 0,
+        "udpLostPacketsRelative": 0.0
+      }
+    }
+  }
+}

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.write.Point;
 
-import java.sql.Array;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,17 +33,17 @@ public class JsonToInfluxDataConverter {
     }
 
     private static List<Point> convertICMPRTTMetric(JsonNode jsonNode) {
-        Point point = new Point("ICMP_RTT");
-        addMetricMetaDataAsTags(jsonNode, point);
-        point.addField("packetsTransmitted", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("packetsTransmitted").asInt());
-        point.addField("packetsReceived", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("packetsReceived").asInt());
-        point.addField("packetLoss", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("packetLoss").asDouble());
-        point.addField("time", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("time").asInt());
-        point.addField("rttMin", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("rttMin").asDouble());
-        point.addField("rttAvg", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("rttAvg").asDouble());
-        point.addField("rttMax", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("rttMax").asDouble());
-        point.addField("rttMdev", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("rttMdev").asDouble());
-        return new ArrayList<>(List.of(point));
+        Point pingDelayMeasurement = new Point("ICMP_RTT");
+        addMetricMetaDataAsTags(jsonNode, pingDelayMeasurement);
+        pingDelayMeasurement.addField("packetsTransmitted", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("packetsTransmitted").asInt());
+        pingDelayMeasurement.addField("packetsReceived", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("packetsReceived").asInt());
+        pingDelayMeasurement.addField("packetLoss", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("packetLoss").asDouble());
+        pingDelayMeasurement.addField("time", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("time").asInt());
+        pingDelayMeasurement.addField("rttMin", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("rttMin").asDouble());
+        pingDelayMeasurement.addField("rttAvg", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("rttAvg").asDouble());
+        pingDelayMeasurement.addField("rttMax", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("rttMax").asDouble());
+        pingDelayMeasurement.addField("rttMdev", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("rttMdev").asDouble());
+        return new ArrayList<>(List.of(pingDelayMeasurement));
     }
 
     private static void addMetricMetaDataAsTags(JsonNode jsonNode, Point point) {
@@ -58,18 +57,19 @@ public class JsonToInfluxDataConverter {
     }
 
     private static List<Point> convertUDPBWMetric(JsonNode jsonNode) {
+        String measurementName = "UDP_BW";
         // For receiver
-        Point iperfBandwidthMeasurementReceiverPoint = new Point("UDP_BW");
+        Point iperfBandwidthMeasurementReceiverPoint = new Point(measurementName);
         addMetricMetaDataAsTags(jsonNode, iperfBandwidthMeasurementReceiverPoint);
-        addBandwithMeasurement(jsonNode, iperfBandwidthMeasurementReceiverPoint, "iperfBandwidthMeasurementReceiver");
+        addUDPBandwithMeasurement(jsonNode, iperfBandwidthMeasurementReceiverPoint, "iperfBandwidthMeasurementReceiver");
         // For sender
-        Point iperfBandwidthMeasurementSenderPoint = new Point("UDP_BW");
+        Point iperfBandwidthMeasurementSenderPoint = new Point(measurementName);
         addMetricMetaDataAsTags(jsonNode, iperfBandwidthMeasurementSenderPoint);
-        addBandwithMeasurement(jsonNode, iperfBandwidthMeasurementSenderPoint, "iperfBandwidthMeasurementSender");
+        addUDPBandwithMeasurement(jsonNode, iperfBandwidthMeasurementSenderPoint, "iperfBandwidthMeasurementSender");
         return new ArrayList<>(List.of(iperfBandwidthMeasurementReceiverPoint, iperfBandwidthMeasurementSenderPoint));
     }
 
-    private static void addBandwithMeasurement(JsonNode jsonNode, Point iperfBandwidthMeasurementReceiverPoint, String iperfBandwidthMeasurementRole) {
+    private static void addUDPBandwithMeasurement(JsonNode jsonNode, Point iperfBandwidthMeasurementReceiverPoint, String iperfBandwidthMeasurementRole) {
         iperfBandwidthMeasurementReceiverPoint.addTag("iperf3Protocol", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("iperf3Protocol").asText());
         iperfBandwidthMeasurementReceiverPoint.addField("bitrate", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("bitrate").asDouble());
         iperfBandwidthMeasurementReceiverPoint.addTag("bandwidthUnit", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("bandwidthUnit").asText());
@@ -79,12 +79,39 @@ public class JsonToInfluxDataConverter {
         iperfBandwidthMeasurementReceiverPoint.addField("totalDatagrams", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("totalDatagrams").asInt());
     }
 
+    private static void addTCPBandWidthMeasurement(JsonNode jsonNode, Point iperfBandwidthMeasurementReceiverPoint, String iperfBandwidthMeasurementRole) {
+        iperfBandwidthMeasurementReceiverPoint.addTag("iperf3Protocol", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("iperf3Protocol").asText());
+        iperfBandwidthMeasurementReceiverPoint.addField("bitrate", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("bitrate").asDouble());
+        iperfBandwidthMeasurementReceiverPoint.addTag("bandwidthUnit", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("bandwidthUnit").asText());
+        iperfBandwidthMeasurementReceiverPoint.addTag("iperfRole", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("iperfRole").asText());
+    }
+
     private static List<Point> convertTCPBWMetric(JsonNode jsonNode) {
-        return new ArrayList<>();
+        String measurementName = "TCP_BW";
+        // For receiver
+        Point iperfBandwidthMeasurementReceiverPoint = new Point(measurementName);
+        addMetricMetaDataAsTags(jsonNode, iperfBandwidthMeasurementReceiverPoint);
+        addTCPBandWidthMeasurement(jsonNode, iperfBandwidthMeasurementReceiverPoint, "iperfBandwidthMeasurementReceiver");
+        // For sender
+        Point iperfBandwidthMeasurementSenderPoint = new Point(measurementName);
+        addMetricMetaDataAsTags(jsonNode, iperfBandwidthMeasurementSenderPoint);
+        addTCPBandWidthMeasurement(jsonNode, iperfBandwidthMeasurementSenderPoint, "iperfBandwidthMeasurementSender");
+        return new ArrayList<>(List.of(iperfBandwidthMeasurementReceiverPoint, iperfBandwidthMeasurementSenderPoint));
     }
 
     private static List<Point> convertUDPRTTMetric(JsonNode jsonNode) {
-        return new ArrayList<>();
+        String measurementName = "UDP_RTT";
+        Point npingDelayMeasurementPoint = new Point(measurementName);
+        addMetricMetaDataAsTags(jsonNode, npingDelayMeasurementPoint);
+        npingDelayMeasurementPoint.addField("dataLength", jsonNode.get("metric").get("metricResult").get("dataLength").asInt());
+        npingDelayMeasurementPoint.addField("maxRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("maxRTT").asDouble());
+        npingDelayMeasurementPoint.addField("minRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("minRTT").asDouble());
+        npingDelayMeasurementPoint.addField("avgRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("avgRTT").asDouble());
+        npingDelayMeasurementPoint.addField("udpPacketsSent", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpPacketsSent").asInt());
+        npingDelayMeasurementPoint.addField("udpReceivedPackets", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpReceivedPackets").asInt());
+        npingDelayMeasurementPoint.addField("udpLostPacketsAbsolute", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpLostPacketsAbsolute").asInt());
+        npingDelayMeasurementPoint.addField("udpLostPacketsRelative", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpLostPacketsRelative").asDouble());
+        return new ArrayList<>(List.of(npingDelayMeasurementPoint));
     }
 
     private static List<Point> convertTCPRTTMetric(JsonNode jsonNode) {

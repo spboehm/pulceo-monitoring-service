@@ -1,0 +1,26 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "fee50cfc-1360-4713-a70e-a0827d2d6976",
+    "jobUUID": "fee50cfc-1360-4713-a70e-a0827d2d6976",
+    "metricType": "TCP_BW",
+    "metricResult": {
+      "sourceHost": "localhost",
+      "destinationHost": "localhost",
+      "startTime": "2024-01-29T10:32:57.465165Z",
+      "endTime": "2024-01-29T10:32:58.479535020Z",
+      "iperfBandwidthMeasurementReceiver": {
+        "iperf3Protocol": "TCP",
+        "bitrate": 15735.0,
+        "bandwidthUnit": "Mbits/s",
+        "iperfRole": "RECEIVER"
+      },
+      "iperfBandwidthMeasurementSender": {
+        "iperf3Protocol": "TCP",
+        "bitrate": 15738.0,
+        "bandwidthUnit": "Mbits/s",
+        "iperfRole": "SENDER"
+      }
+    }
+  }
+}

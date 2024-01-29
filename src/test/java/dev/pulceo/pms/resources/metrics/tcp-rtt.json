@@ -1,0 +1,24 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "cbd29b61-5955-4743-9c62-6710bf7bcab5",
+    "jobUUID": "ac122df4-32b0-4c2d-9048-6cfd7971b477",
+    "metricType": "TCP_RTT",
+    "metricResult": {
+      "sourceHost": "127.0.0.1",
+      "destinationHost": "127.0.0.1",
+      "startTime": "2024-01-29T09:07:11.716082302Z",
+      "endTime": "2024-01-29T09:07:11.725847321Z",
+      "npingTCPDelayMeasurement": {
+        "uuid": "0874f97b-58a3-48d8-b1ed-7db09884e803",
+        "maxRTT": 0.007,
+        "minRTT": 0.007,
+        "avgRTT": 0.007,
+        "tcpConnectionAttempts": 1,
+        "tcpSuccessfulConnections": 1,
+        "tcpFailedConnectionsAbsolute": 0,
+        "tcpFailedConnectionsRelative": 0.0
+      }
+    }
+  }
+}

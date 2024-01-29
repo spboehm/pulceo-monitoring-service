@@ -101,21 +101,31 @@ public class JsonToInfluxDataConverter {
 
     private static List<Point> convertUDPRTTMetric(JsonNode jsonNode) {
         String measurementName = "UDP_RTT";
-        Point npingDelayMeasurementPoint = new Point(measurementName);
-        addMetricMetaDataAsTags(jsonNode, npingDelayMeasurementPoint);
-        npingDelayMeasurementPoint.addField("dataLength", jsonNode.get("metric").get("metricResult").get("dataLength").asInt());
-        npingDelayMeasurementPoint.addField("maxRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("maxRTT").asDouble());
-        npingDelayMeasurementPoint.addField("minRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("minRTT").asDouble());
-        npingDelayMeasurementPoint.addField("avgRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("avgRTT").asDouble());
-        npingDelayMeasurementPoint.addField("udpPacketsSent", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpPacketsSent").asInt());
-        npingDelayMeasurementPoint.addField("udpReceivedPackets", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpReceivedPackets").asInt());
-        npingDelayMeasurementPoint.addField("udpLostPacketsAbsolute", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpLostPacketsAbsolute").asInt());
-        npingDelayMeasurementPoint.addField("udpLostPacketsRelative", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpLostPacketsRelative").asDouble());
-        return new ArrayList<>(List.of(npingDelayMeasurementPoint));
+        Point npingUDPDelayMeasurment = new Point(measurementName);
+        addMetricMetaDataAsTags(jsonNode, npingUDPDelayMeasurment);
+        npingUDPDelayMeasurment.addField("dataLength", jsonNode.get("metric").get("metricResult").get("dataLength").asInt());
+        npingUDPDelayMeasurment.addField("maxRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("maxRTT").asDouble());
+        npingUDPDelayMeasurment.addField("minRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("minRTT").asDouble());
+        npingUDPDelayMeasurment.addField("avgRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("avgRTT").asDouble());
+        npingUDPDelayMeasurment.addField("udpPacketsSent", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpPacketsSent").asInt());
+        npingUDPDelayMeasurment.addField("udpReceivedPackets", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpReceivedPackets").asInt());
+        npingUDPDelayMeasurment.addField("udpLostPacketsAbsolute", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpLostPacketsAbsolute").asInt());
+        npingUDPDelayMeasurment.addField("udpLostPacketsRelative", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("udpLostPacketsRelative").asDouble());
+        return new ArrayList<>(List.of(npingUDPDelayMeasurment));
     }
 
     private static List<Point> convertTCPRTTMetric(JsonNode jsonNode) {
-        return new ArrayList<>();
+        String measurementName = "TCP_RTT";
+        Point npingTCPDelayMeasurement = new Point(measurementName);
+        addMetricMetaDataAsTags(jsonNode, npingTCPDelayMeasurement);
+        npingTCPDelayMeasurement.addField("maxRTT", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("maxRTT").asDouble());
+        npingTCPDelayMeasurement.addField("minRTT", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("minRTT").asDouble());
+        npingTCPDelayMeasurement.addField("avgRTT", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("avgRTT").asDouble());
+        npingTCPDelayMeasurement.addField("tcpConnectionAttempts", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("tcpConnectionAttempts").asInt());
+        npingTCPDelayMeasurement.addField("tcpSuccessfulConnections", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("tcpSuccessfulConnections").asInt());
+        npingTCPDelayMeasurement.addField("tcpFailedConnectionsAbsolute", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("tcpFailedConnectionsAbsolute").asInt());
+        npingTCPDelayMeasurement.addField("tcpFailedConnectionsRelative", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("tcpFailedConnectionsRelative").asDouble());
+        return new ArrayList<>(List.of(npingTCPDelayMeasurement));
     }
 
 }

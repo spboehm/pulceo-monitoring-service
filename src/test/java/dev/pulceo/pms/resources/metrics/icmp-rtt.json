@@ -5,8 +5,8 @@
     "jobUUID": "f806ca34-2cea-41f4-a17e-ae3c0efcc971",
     "metricType": "ICMP_RTT",
     "metricResult": {
-      "sourceHost": "localhost",
-      "destinationHost": "localhost",
+      "sourceHost": "127.0.0.1",
+      "destinationHost": "127.0.0.1",
       "startTime": "2024-01-29T09:06:59.157516308Z",
       "endTime": "2024-01-29T09:06:59.160564103Z",
       "pingDelayMeasurement": {

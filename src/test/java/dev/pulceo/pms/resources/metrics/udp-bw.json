@@ -1,0 +1,32 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "a4524c72-f53d-449e-9b3b-37fe7904eae4",
+    "jobUUID": "a4524c72-f53d-449e-9b3b-37fe7904eae4",
+    "metricType": "UDP_BW",
+    "metricResult": {
+      "sourceHost": "127.0.0.1",
+      "destinationHost": "127.0.0.1",
+      "startTime": "2024-01-29T09:06:57.008627239Z",
+      "endTime": "2024-01-29T09:06:58.011300946Z",
+      "iperfBandwidthMeasurementReceiver": {
+        "iperf3Protocol": "UDP",
+        "bitrate": 32.1,
+        "bandwidthUnit": "Mbits/s",
+        "iperfRole": "RECEIVER",
+        "jitter": 0.017,
+        "lostDatagrams": 0,
+        "totalDatagrams": 241
+      },
+      "iperfBandwidthMeasurementSender": {
+        "iperf3Protocol": "UDP",
+        "bitrate": 32.1,
+        "bandwidthUnit": "Mbits/s",
+        "iperfRole": "SENDER",
+        "jitter": 0.0,
+        "lostDatagrams": 0,
+        "totalDatagrams": 241
+      }
+    }
+  }
+}

@@ -76,8 +76,8 @@ public class InfluxDBService {
                 }
                 // otherwise process workload
                 String payLoadAsJson = (String) message.getPayload();
-                writeApi.writePoint(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
-                logger.debug("Wrote message to InfluxDB: " + payLoadAsJson);
+                writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
+                logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
             }
         } catch (InterruptedException e) {
             logger.info("InfluxDBService received termination signal...shutdown initiated");

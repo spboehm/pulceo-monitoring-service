@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.support.GenericMessage;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -55,13 +56,12 @@ public class InfluxDBService {
     @PostConstruct
     public void postConstruct() {
         threadPoolTaskExecutor.execute(this::init);
-        threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
-        threadPoolTaskExecutor.setAwaitTerminationSeconds(30);
     }
 
     @PreDestroy
-    public void preDestroy() {
+    public void preDestroy() throws InterruptedException {
         isRunning = false;
+        this.mqttBlockingQueue.put(new GenericMessage<>("STOP"));
         threadPoolTaskExecutor.shutdown();
     }
 
@@ -70,11 +70,17 @@ public class InfluxDBService {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
             while(isRunning) {
                 Message<?> message = mqttBlockingQueue.take();
+                if ("STOP".equals(message.getPayload())) {
+                    logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
+                    return;
+                }
+                // otherwise process workload
                 String payLoadAsJson = (String) message.getPayload();
                 writeApi.writePoint(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
                 logger.debug("Wrote message to InfluxDB: " + payLoadAsJson);
             }
         } catch (InterruptedException e) {
+            logger.info("InfluxDBService received termination signal...shutdown initiated");
             Thread.currentThread().interrupt();
         } catch (JsonProcessingException e) {
             logger.error("Could not convert message to InfluxDB point: " + e.getMessage());

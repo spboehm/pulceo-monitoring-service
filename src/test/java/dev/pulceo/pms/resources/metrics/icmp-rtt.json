@@ -1,0 +1,25 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "99976261-b25d-4466-b522-8682496dccb2",
+    "jobUUID": "f806ca34-2cea-41f4-a17e-ae3c0efcc971",
+    "metricType": "ICMP_RTT",
+    "metricResult": {
+      "sourceHost": "localhost",
+      "destinationHost": "localhost",
+      "startTime": "2024-01-29T09:06:59.157516308Z",
+      "endTime": "2024-01-29T09:06:59.160564103Z",
+      "pingDelayMeasurement": {
+        "uuid": "6d6237bf-8400-4761-ad66-502711143b23",
+        "packetsTransmitted": 1,
+        "packetsReceived": 1,
+        "packetLoss": 0.0,
+        "time": 0,
+        "rttMin": 0.045,
+        "rttAvg": 0.045,
+        "rttMax": 0.045,
+        "rttMdev": 0.0
+      }
+    }
+  }
+}

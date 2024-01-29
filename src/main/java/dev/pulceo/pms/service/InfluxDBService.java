@@ -1,12 +1,18 @@
 package dev.pulceo.pms.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
 import com.influxdb.client.WriteApiBlocking;
 import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
+import dev.pulceo.pms.util.JsonToInfluxDataConverter;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.Message;
@@ -20,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class InfluxDBService {
 
+    private final Logger logger = LoggerFactory.getLogger(InfluxDBService.class);
+
     @Value("${influxdb.token}")
     private String token;
 
@@ -28,6 +36,9 @@ public class InfluxDBService {
 
     @Value("${influxdb.bucket}")
     private String bucket;
+
+    @Value("${influxdb.url}")
+    private String influxDBUrl;
 
     private final BlockingQueue<Message<?>> mqttBlockingQueue;
 
@@ -54,27 +65,19 @@ public class InfluxDBService {
         threadPoolTaskExecutor.shutdown();
     }
 
-    public void init() {
-        try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create("http://localhost:8086", token.toCharArray(), org, bucket)) {
-            //
-            // Write data
-            //
+    private void init() {
+        try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
             while(isRunning) {
-                System.out.println(Thread.currentThread().getName() + ":" + Thread.currentThread().getId());
                 Message<?> message = mqttBlockingQueue.take();
-                //
-                // Write by Data Point
-                //
-                Point point = Point.measurement("temperature")
-                        .addTag("location", "west")
-                        .addField("value", 55D)
-                        .time(Instant.now().toEpochMilli(), WritePrecision.MS);
-
-                writeApi.writePoint(point);
+                String payLoadAsJson = (String) message.getPayload();
+                writeApi.writePoint(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
+                logger.debug("Wrote message to InfluxDB: " + payLoadAsJson);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (JsonProcessingException e) {
+            logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
         }
     }
 }

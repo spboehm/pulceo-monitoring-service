@@ -76,6 +76,9 @@ public class InfluxDBService {
                 }
                 // otherwise process workload
                 String payLoadAsJson = (String) message.getPayload();
+                ObjectMapper objectMapper = new ObjectMapper();
+                // TODO: maybe propagte to other subscriptions, maybe SSEEmitter
+
                 writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
                 logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
             }

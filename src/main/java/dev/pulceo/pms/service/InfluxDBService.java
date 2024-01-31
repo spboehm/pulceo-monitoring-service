@@ -54,12 +54,12 @@ public class InfluxDBService {
     }
 
     @PostConstruct
-    public void postConstruct() {
+    private void postConstruct() {
         threadPoolTaskExecutor.execute(this::init);
     }
 
     @PreDestroy
-    public void preDestroy() throws InterruptedException {
+    private void preDestroy() throws InterruptedException {
         isRunning = false;
         this.mqttBlockingQueue.put(new GenericMessage<>("STOP"));
         threadPoolTaskExecutor.shutdown();

@@ -48,6 +48,7 @@ public class JsonToInfluxDataConverter {
 
     private static void addMetricMetaDataAsTags(JsonNode jsonNode, Point point) {
         point.addTag("deviceId", jsonNode.get("deviceId").asText());
+        point.addTag("jobUUID", jsonNode.get("metric").get("jobUUID").asText());
         point.addTag("metricUUID", jsonNode.get("metric").get("metricUUID").asText());
         point.addTag("metricType", jsonNode.get("metric").get("metricType").asText());
         point.addTag("sourceHost", jsonNode.get("metric").get("metricResult").get("sourceHost").asText());

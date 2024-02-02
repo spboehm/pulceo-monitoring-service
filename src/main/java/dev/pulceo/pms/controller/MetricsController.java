@@ -1,27 +1,41 @@
 package dev.pulceo.pms.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.pulceo.pms.model.Test;
-import dev.pulceo.pms.service.InfluxDBService;
+import dev.pulceo.pms.dto.metricrequests.CreateNewAbstractMetricRequestDTO;
+import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestIcmpRttDTO;
+import dev.pulceo.pms.dto.metricrequests.ShortMetricResponseDTO;
+import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
+import dev.pulceo.pms.model.metricrequests.MetricRequest;
+import dev.pulceo.pms.service.MetricsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.Message;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.*;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.util.HtmlUtils;
-
-import java.security.Principal;
-import java.text.SimpleDateFormat;
+import org.springframework.web.bind.annotation.PostMapping;
 
 @Controller
-@EnableScheduling
 public class MetricsController {
+
+    private final MetricsService metricsService;
+
+    @Autowired
+    public MetricsController(MetricsService metricsService) {
+        this.metricsService = metricsService;
+    }
 
     @MessageMapping("/register")
     @SendTo("/metrics")
     public String greeting(Object message) throws Exception {
         return "Hello!";
     }
+
+    @PostMapping("/api/v1/metric-requests")
+    public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
+        // TODO: check type of metric request
+        CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = (CreateNewMetricRequestIcmpRttDTO) createNewAbstractMetricRequestDTO;
+        MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(IcmpRttMetricRequest.fromCreateNewMetricRequestIcmpRttDTO(createNewMetricRequestIcmpRttDTO));
+        return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
+    }
+
+
+
 }

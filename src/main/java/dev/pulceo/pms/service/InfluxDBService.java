@@ -77,6 +77,16 @@ public class InfluxDBService {
                 }
                 // otherwise process workload
                 String payLoadAsJson = (String) message.getPayload();
+
+                // TODO: check for running metric-requests
+
+
+                // TODO: retrieve the processing rules
+
+                // TODO: broadcast to processing endpoints (ws)
+
+                // TODO: store data
+
                 writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
                 logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
             }

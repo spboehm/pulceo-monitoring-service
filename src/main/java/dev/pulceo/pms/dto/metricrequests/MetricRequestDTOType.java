@@ -1,4 +1,5 @@
 package dev.pulceo.pms.dto.metricrequests;
 
-public class MetricRequestDTOType {
+public enum MetricRequestDTOType {
+    ICMP_RTT
 }

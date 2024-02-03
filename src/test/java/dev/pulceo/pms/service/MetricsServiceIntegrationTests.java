@@ -11,11 +11,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.WireMockSpring;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.annotation.DirtiesContext.ClassMode.BEFORE_CLASS;
 
 @SpringBootTest
 public class MetricsServiceIntegrationTests {
@@ -25,28 +27,30 @@ public class MetricsServiceIntegrationTests {
 
     // for some reason `dynamicPort()` is not working properly
     public static WireMockServer wireMockServerForPRM = new WireMockServer(WireMockSpring.options().bindAddress("127.0.0.1").port(7878));
+    public static WireMockServer wireMockServerForPNA = new WireMockServer(WireMockSpring.options().bindAddress("127.0.0.1").port(7676));
 
     @BeforeAll
     static void setupClass() {
-        SimulatedPulceoNodeAgent.createAgents(2);
-        wireMockServerForPRM.start();
+        MetricsServiceIntegrationTests.wireMockServerForPRM.start();
+        MetricsServiceIntegrationTests.wireMockServerForPNA.start();
     }
 
     @AfterEach
     void after() {
-        wireMockServerForPRM.resetAll();
-        SimulatedPulceoNodeAgent.resetAgents();
+        MetricsServiceIntegrationTests.wireMockServerForPRM.resetAll();
+        MetricsServiceIntegrationTests.wireMockServerForPNA.resetAll();
     }
 
     @AfterAll
     static void clean() {
-        wireMockServerForPRM.shutdown();
-        SimulatedPulceoNodeAgent.stopAgents();
+        MetricsServiceIntegrationTests.wireMockServerForPRM.shutdown();
+        MetricsServiceIntegrationTests.wireMockServerForPRM.shutdown();
     }
 
     @Test
     public void testCreateNewMetricRequestIcmpRTT() {
         // given
+        UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
         IcmpRttMetricRequest icmpRttMetricRequest = IcmpRttMetricRequest.builder()
                 .linkUUID(linkUUID)
@@ -55,19 +59,30 @@ public class MetricsServiceIntegrationTests {
                 .enabled(true)
                 .build();
         // mock link request to pan
-        wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/links/" + linkUUID))
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/links/" + linkUUID))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBodyFile("link/prm-read-link-by-uuid-response.json")));
 
         // mock link request to pna => done in SimulatedPnaAgent
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/nodes/" + srcNodeUUID))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("node/prm-read-node-by-uuid-response.json")));
+
+        // mock metric request to prm
+        MetricsServiceIntegrationTests.wireMockServerForPNA.stubFor(post(urlEqualTo("/api/v1/links/" + linkUUID + "/metric-requests/icmp-rtt-requests"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("metricrequests/create-new-icmp-rtt-request-response.json")));
 
         // when
         MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(icmpRttMetricRequest);
 
         // then
-        // TODO: job uuid
         assertEquals(icmpRttMetricRequest.getLinkUUID(), metricRequest.getLinkUUID());
         assertEquals(icmpRttMetricRequest.getType(), metricRequest.getType());
         assertEquals(icmpRttMetricRequest.getRecurrence(), metricRequest.getRecurrence());

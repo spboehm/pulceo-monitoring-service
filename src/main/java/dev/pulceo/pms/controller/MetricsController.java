@@ -2,6 +2,7 @@ package dev.pulceo.pms.controller;
 
 import dev.pulceo.pms.dto.metricrequests.CreateNewAbstractMetricRequestDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestIcmpRttDTO;
+import dev.pulceo.pms.dto.metricrequests.MetricRequestDTOType;
 import dev.pulceo.pms.dto.metricrequests.ShortMetricResponseDTO;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @Controller
 public class MetricsController {
@@ -29,13 +31,14 @@ public class MetricsController {
     }
 
     @PostMapping("/api/v1/metric-requests")
-    public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
+    public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(@RequestBody CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
         // TODO: check type of metric request
-        CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = (CreateNewMetricRequestIcmpRttDTO) createNewAbstractMetricRequestDTO;
-        MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(IcmpRttMetricRequest.fromCreateNewMetricRequestIcmpRttDTO(createNewMetricRequestIcmpRttDTO));
-        return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
+        if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.ICMP_RTT) {
+            CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
+            MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(IcmpRttMetricRequest.fromCreateNewMetricRequestIcmpRttDTO(createNewMetricRequestIcmpRttDTO));
+            return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
+        }
+        return ResponseEntity.status(400).build();
     }
-
-
 
 }

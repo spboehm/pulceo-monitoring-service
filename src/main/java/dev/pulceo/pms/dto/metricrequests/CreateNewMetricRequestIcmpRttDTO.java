@@ -22,4 +22,18 @@ public class CreateNewMetricRequestIcmpRttDTO extends CreateNewAbstractMetricReq
     private int dataLength = 66;
     @Builder.Default
     private String iface = "lo";
+
+    public static CreateNewMetricRequestIcmpRttDTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
+        CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = (CreateNewMetricRequestIcmpRttDTO) createNewAbstractMetricRequestDTO;
+        return CreateNewMetricRequestIcmpRttDTO.builder()
+                .linkUUID(createNewMetricRequestIcmpRttDTO.getLinkUUID())
+                .type(createNewMetricRequestIcmpRttDTO.getType())
+                .recurrence(createNewMetricRequestIcmpRttDTO.getRecurrence())
+                .enabled(createNewMetricRequestIcmpRttDTO.isEnabled())
+                .ipVersion(createNewMetricRequestIcmpRttDTO.getIpVersion())
+                .count(createNewMetricRequestIcmpRttDTO.getCount())
+                .dataLength(createNewMetricRequestIcmpRttDTO.getDataLength())
+                .iface(createNewMetricRequestIcmpRttDTO.getIface())
+                .build();
+    }
 }

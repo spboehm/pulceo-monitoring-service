@@ -42,7 +42,7 @@ public class MetricsService {
         // TODO: check if link does already exist
         WebClient webClient = WebClient.create(this.prmEndpoint);
         NodeLinkDTO nodeLinkDTO = webClient.get()
-                .uri("/api/v1/links/" + icmpRttMetricRequest.getLinkUUID())
+                .uri("/api/v1/links/" + icmpRttMetricRequest.getLinkUUID()) // on cloud
                 .retrieve()
                 .bodyToMono(NodeLinkDTO.class)
                 .onErrorResume(error -> {

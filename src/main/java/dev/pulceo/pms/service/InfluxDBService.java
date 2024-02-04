@@ -83,18 +83,20 @@ public class InfluxDBService {
                 }
                 // otherwise process workload
                 String payLoadAsJson = (String) message.getPayload();
-
-                // TODO: check for running metric-requests
-                simpMessagingTemplate.convertAndSend("/metrics/asdf", payLoadAsJson);
+                writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
+                logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
+                // TODO: check for running metric-requests, send raw data
+                simpMessagingTemplate.convertAndSend("/metrics/raw", payLoadAsJson);
 
                 // TODO: retrieve the processing rules
+                // Input: remoteLinkUUID, metricRequest UUID, transformer function
+
 
                 // TODO: broadcast to processing endpoints (ws)
 
                 // TODO: store data
 
-                writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
-                logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
+
             }
         } catch (InterruptedException e) {
             logger.info("InfluxDBService received termination signal...shutdown initiated");
@@ -103,4 +105,26 @@ public class InfluxDBService {
             logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
         }
     }
+
+
+    public void process() {
+
+    }
+
+    public void processNetworkMeasurement() {
+
+        // do mean
+        // moving average
+        // median
+
+        // by windows
+
+    }
+
+    public void processNodeMeasurement() {
+
+    }
+
+
+
 }

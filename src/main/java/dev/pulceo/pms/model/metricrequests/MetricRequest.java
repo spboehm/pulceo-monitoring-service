@@ -16,11 +16,13 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
+// TODO change to network metric request
 public class MetricRequest extends BaseEntity {
     // TODO: change with job id
     private UUID uuid;
     private UUID linkUUID; // remote link UUID
     private String type;
     private String recurrence;
+    // TODO: add transformer
     private boolean enabled;
 }

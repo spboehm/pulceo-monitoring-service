@@ -16,7 +16,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 public class IcmpRttMetricRequest extends AbstractMetricRequest {
-    private UUID linkUUID;
+    private UUID linkUUID; // remote link UUID
     private String type;
     private String recurrence;
     private boolean enabled;

@@ -22,6 +22,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -48,10 +49,15 @@ public class InfluxDBService {
 
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
+    private MetricsService metricsService;
+
+    private final SimpMessagingTemplate simpMessagingTemplate;
+
     @Autowired
-    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor) {
+    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate) {
         this.mqttBlockingQueue = mqttBlockingQueue;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
+        this.simpMessagingTemplate = simpMessagingTemplate;
     }
 
     @PostConstruct
@@ -79,7 +85,7 @@ public class InfluxDBService {
                 String payLoadAsJson = (String) message.getPayload();
 
                 // TODO: check for running metric-requests
-
+                simpMessagingTemplate.convertAndSend("/metrics/asdf", payLoadAsJson);
 
                 // TODO: retrieve the processing rules
 

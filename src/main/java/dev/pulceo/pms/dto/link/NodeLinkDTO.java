@@ -13,6 +13,7 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 public class NodeLinkDTO extends AbstractLinkDTO {
     private String linkUUID;
+    private UUID remoteNodeLinkUUID;
     private String name;
     private UUID srcNodeUUID;
     private UUID destNodeUUID;

@@ -1,5 +1,6 @@
 {
   "linkUUID": "ea9084cf-97bb-451e-8220-4bdda327839e",
+  "remoteNodeLinkUUID": "ea9084cf-97bb-451e-8220-4bcda327839e",
   "name": "testLink",
   "srcNodeUUID": "0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3",
   "destNodeUUID": "d6421210-6759-4973-bad3-7f47bcb133c1"

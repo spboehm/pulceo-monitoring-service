@@ -19,7 +19,7 @@ import java.util.UUID;
 public class MetricRequest extends BaseEntity {
     // TODO: change with job id
     private UUID uuid;
-    private UUID linkUUID;
+    private UUID linkUUID; // remote link UUID
     private String type;
     private String recurrence;
     private boolean enabled;

@@ -52,9 +52,9 @@ public class MetricsService {
 
         // Instruct pna to create a new ICMP RTT metric request
         // determine srcNode of the link to send the request to the correct pna
-        UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
-        System.out.println("srcNodeUUID: " + srcNodeUUID);
+
         // first obtain the hostname
+        UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
         NodeDTO srcNode = webClient.get()
                 .uri("/api/v1/nodes/" + srcNodeUUID)
                 .retrieve()
@@ -66,7 +66,7 @@ public class MetricsService {
 
         // then send the request to the correct pna
         CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttDTO.builder()
-                .linkUUID(icmpRttMetricRequest.getLinkUUID())
+                .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
                 .type(icmpRttMetricRequest.getType())
                 .recurrence(icmpRttMetricRequest.getRecurrence())
                 .enabled(icmpRttMetricRequest.isEnabled())
@@ -74,7 +74,7 @@ public class MetricsService {
 
         webClient = WebClient.create("http://" + srcNode.getHostname() + ":7676");
         MetricRequest metricRequest = webClient.post()
-                .uri("/api/v1/links/" + icmpRttMetricRequest.getLinkUUID() + "/metric-requests/icmp-rtt-requests")
+                .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/icmp-rtt-requests")
                 .bodyValue(createNewMetricRequestIcmpRttDTO)
                 .retrieve()
                 .bodyToMono(MetricRequest.class)

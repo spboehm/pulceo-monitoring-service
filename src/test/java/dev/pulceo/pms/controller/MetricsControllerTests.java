@@ -88,7 +88,7 @@ public class MetricsControllerTests {
                         .withBodyFile("node/prm-read-node-by-uuid-response.json")));
 
         // mock metric request to prm
-        MetricsServiceIntegrationTests.wireMockServerForPNA.stubFor(WireMock.post(urlEqualTo("/api/v1/links/" + linkUUID + "/metric-requests/icmp-rtt-requests"))
+        MetricsServiceIntegrationTests.wireMockServerForPNA.stubFor(WireMock.post(urlEqualTo("/api/v1/links/ea9084cf-97bb-451e-8220-4bcda327839e/metric-requests/icmp-rtt-requests"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")

@@ -82,7 +82,7 @@ public class MetricsService {
                     throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
                 })
                 .block();
-        // TODO: do conversion to DTO and persis then in database
+        // TODO: do conversion to DTO and persist then in database
         return this.metricRequestRepository.save(metricRequest);
     }
 

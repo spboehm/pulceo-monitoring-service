@@ -3,7 +3,6 @@ package dev.pulceo.pms.service;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
-import dev.pulceo.pms.util.SimulatedPulceoNodeAgent;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -11,13 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.WireMockSpring;
-import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.annotation.DirtiesContext.ClassMode.BEFORE_CLASS;
 
 @SpringBootTest
 public class MetricsServiceIntegrationTests {
@@ -83,7 +80,7 @@ public class MetricsServiceIntegrationTests {
         MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(icmpRttMetricRequest);
 
         // then
-        assertEquals(icmpRttMetricRequest.getLinkUUID(), metricRequest.getLinkUUID());
+        assertEquals(icmpRttMetricRequest.getLinkUUID(), metricRequest.getRemoteLinkUUID());
         assertEquals(icmpRttMetricRequest.getType(), metricRequest.getType());
         assertEquals(icmpRttMetricRequest.getRecurrence(), metricRequest.getRecurrence());
         assertEquals(icmpRttMetricRequest.isEnabled(), metricRequest.isEnabled());

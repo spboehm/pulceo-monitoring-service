@@ -10,20 +10,17 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-// TODO: used for internal, not for external, adjust naming
-public class ShortMetricResponseDTO {
+public class MetricResponseDTO {
     // TODO: rename to jobUUID
     private UUID uuid;
-    private UUID remoteMetricRequestUUID;
     private UUID linkUUID;
     private String type;
     private String recurrence;
     private boolean enabled;
 
-    public static ShortMetricResponseDTO fromMetricRequest(MetricRequest metricRequest) {
-        return new ShortMetricResponseDTO(
+    public static MetricResponseDTO fromMetricRequest(MetricRequest metricRequest) {
+        return new MetricResponseDTO(
                 metricRequest.getUuid(),
-                metricRequest.getRemoteMetricRequestUUID(),
                 metricRequest.getRemoteLinkUUID(),
                 metricRequest.getType(),
                 metricRequest.getRecurrence(),

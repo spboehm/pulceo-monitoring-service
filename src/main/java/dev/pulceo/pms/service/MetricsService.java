@@ -82,6 +82,8 @@ public class MetricsService {
                     throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
                 })
                 .block();
+        // TODO: set link UUID to achieve an appropriate mapping
+        metricRequest.setLinkUUID(icmpRttMetricRequest.getLinkUUID());
         // TODO: do conversion to DTO and persist then in database
         return this.metricRequestRepository.save(metricRequest);
     }

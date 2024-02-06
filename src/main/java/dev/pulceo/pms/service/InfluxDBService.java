@@ -12,7 +12,9 @@ import com.influxdb.client.write.Point;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
+import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
+import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import dev.pulceo.pms.util.InfluxQueryBuilder;
 import dev.pulceo.pms.util.JsonToInfluxDataConverter;
 import jakarta.annotation.PostConstruct;
@@ -63,11 +65,14 @@ public class InfluxDBService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private final NodeLinkMetricRepository nodeLinkMetricRepository;
+
     @Autowired
-    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate) {
+    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository) {
         this.mqttBlockingQueue = mqttBlockingQueue;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
         this.simpMessagingTemplate = simpMessagingTemplate;
+        this.nodeLinkMetricRepository = nodeLinkMetricRepository;
     }
 
     @PostConstruct
@@ -110,10 +115,10 @@ public class InfluxDBService {
                             for (FluxTable table : tables) {
                                 List<FluxRecord> records = table.getRecords();
                                 for (FluxRecord record : records) {
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(NodeLinkMetricDTO.fromFluxRecord(record, metricRequest)));
-                                    // TODO: store back to influxDB for achiving purposes
-
-                                    // TODO: store for fast access in a cache stat it can be retrieved by the frontend
+                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
+                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                    // store for archiving purposes and fast access
+                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
                                 }
                             }
                             break;
@@ -133,22 +138,8 @@ public class InfluxDBService {
         }
     }
 
-    private void queryData(String query) {
-        try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
-            QueryApi queryApi = influxDBClient.getQueryApi();
-
-            List<FluxTable> tables = queryApi.query(InfluxQueryBuilder.queryLastRawRecord(bucket, "ICMP_RTT", "rttAvg", "54d9ce34-46af-49af-b612-6164270d7a24"));
-            for (FluxTable table : tables) {
-                List<FluxRecord> records = table.getRecords();
-                for (FluxRecord record : records) {
-                    logger.info("Record: " + record.getValues());
-                }
-            }
-        }
-    }
-
     public void notifyAboutNewMetricRequest(MetricRequest metricRequest) {
-        System.out.println("added " + metricRequest.getRemoteMetricRequestUUID());
+        logger.info("Notified about a new metric request: " + metricRequest.getUuid());
         this.metricRequests.put(metricRequest.getRemoteMetricRequestUUID(), metricRequest);
     }
 }

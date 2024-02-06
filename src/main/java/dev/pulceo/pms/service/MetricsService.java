@@ -4,23 +4,28 @@ import dev.pulceo.pms.dto.link.NodeLinkDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestIcmpRttDTO;
 import dev.pulceo.pms.dto.node.NodeDTO;
 import dev.pulceo.pms.exception.MetricsServiceException;
+import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
 import dev.pulceo.pms.repository.MetricRequestRepository;
+import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.geo.Metric;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class MetricsService {
 
     private final MetricRequestRepository metricRequestRepository;
+    private final NodeLinkMetricRepository nodeLinkMetricRepository;
     // ws
     private final SimpMessagingTemplate simpMessagingTemplate;
 
@@ -30,10 +35,11 @@ public class MetricsService {
     private String prmEndpoint;
 
     @Autowired
-    public MetricsService(MetricRequestRepository metricRequestRepository, SimpMessagingTemplate simpMessagingTemplate, InfluxDBService influxDBService) {
+    public MetricsService(MetricRequestRepository metricRequestRepository, SimpMessagingTemplate simpMessagingTemplate, InfluxDBService influxDBService, NodeLinkMetricRepository nodeLinkMetricRepository) {
         this.metricRequestRepository = metricRequestRepository;
         this.simpMessagingTemplate = simpMessagingTemplate;
         this.influxDBService = influxDBService;
+        this.nodeLinkMetricRepository = nodeLinkMetricRepository;
     }
 
     // ws
@@ -50,7 +56,7 @@ public class MetricsService {
                 .retrieve()
                 .bodyToMono(NodeLinkDTO.class)
                 .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create link: Link with id %s does not exist!".formatted(icmpRttMetricRequest.getLinkUUID())));
+                    throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(icmpRttMetricRequest.getLinkUUID())));
                 })
                 .block();
 
@@ -100,6 +106,15 @@ public class MetricsService {
         this.metricRequestRepository.findAll().forEach(metricRequest -> {
             this.influxDBService.notifyAboutNewMetricRequest(metricRequest);
         });
+    }
+
+    public List<NodeLinkMetric> readLastNodeLinkMetricsByLinkUUIDAndMetricType(UUID linkUUID) {
+        List<String> findDistinctMetricTypes = this.nodeLinkMetricRepository.findDistinctMetricTypes();
+        List<NodeLinkMetric> resultList = new ArrayList<>();
+        for (String type : findDistinctMetricTypes) {
+            resultList.add(this.nodeLinkMetricRepository.findLastLinkUUIDAndByMetricType(String.valueOf(linkUUID), type));
+        }
+        return resultList;
     }
 
     // TODO: on startup inform InfluxDBService about all existing metric requests that are in DB

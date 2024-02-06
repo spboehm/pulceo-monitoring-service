@@ -1,8 +1,10 @@
 package dev.pulceo.pms.service;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
+import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -10,7 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.WireMockSpring;
+import org.springframework.test.annotation.DirtiesContext;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
@@ -22,12 +27,16 @@ public class MetricsServiceIntegrationTests {
     @Autowired
     private MetricsService metricsService;
 
+    @Autowired
+    private NodeLinkMetricRepository nodeLinkMetricRepository;
+
     // for some reason `dynamicPort()` is not working properly
     public static WireMockServer wireMockServerForPRM = new WireMockServer(WireMockSpring.options().bindAddress("127.0.0.1").port(7878));
     public static WireMockServer wireMockServerForPNA = new WireMockServer(WireMockSpring.options().bindAddress("127.0.0.1").port(7676));
 
     @BeforeAll
-    static void setupClass() {
+    static void setupClass() throws InterruptedException {
+        Thread.sleep(100);
         MetricsServiceIntegrationTests.wireMockServerForPRM.start();
         MetricsServiceIntegrationTests.wireMockServerForPNA.start();
     }
@@ -41,7 +50,7 @@ public class MetricsServiceIntegrationTests {
     @AfterAll
     static void clean() {
         MetricsServiceIntegrationTests.wireMockServerForPRM.shutdown();
-        MetricsServiceIntegrationTests.wireMockServerForPRM.shutdown();
+        MetricsServiceIntegrationTests.wireMockServerForPNA.shutdown();
     }
 
     @Test
@@ -84,6 +93,37 @@ public class MetricsServiceIntegrationTests {
         assertEquals(icmpRttMetricRequest.getType(), metricRequest.getType());
         assertEquals(icmpRttMetricRequest.getRecurrence(), metricRequest.getRecurrence());
         assertEquals(icmpRttMetricRequest.isEnabled(), metricRequest.isEnabled());
+    }
+
+    @Test
+    public void testFindLastNodeLinkMetricsByLinkUUIDAndMetricType() {
+        // given
+        String linkUUID = "08d039b3-e4e3-4258-a9f5-5967c6a5e024";
+        NodeLinkMetric firstNodeLinkMetric = NodeLinkMetric.builder()
+                .metricType("icmp-rtt")
+                .metricRequestUUID("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3")
+                .linkUUID(linkUUID)
+                .startTime("2021-08-01T00:00:00Z")
+                .endTime("2021-08-01T00:00:15Z")
+                .val(1.0)
+                .unit("ms")
+                .build();
+        NodeLinkMetric secondNodeLinkMetric = NodeLinkMetric.builder()
+                .metricType("udp-rtt")
+                .metricRequestUUID("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3")
+                .linkUUID(linkUUID)
+                .startTime("2021-08-01T00:00:15Z")
+                .endTime("2021-08-01T00:00:30Z")
+                .val(2.0)
+                .unit("ms")
+                .build();
+        this.nodeLinkMetricRepository.saveAll(Arrays.asList(firstNodeLinkMetric, secondNodeLinkMetric));
+
+        // when
+        List<NodeLinkMetric> nodeLinkMetrics = this.metricsService.readLastNodeLinkMetricsByLinkUUIDAndMetricType(UUID.fromString(linkUUID));
+
+        // then
+        assertEquals(2, nodeLinkMetrics.size());
     }
 
 

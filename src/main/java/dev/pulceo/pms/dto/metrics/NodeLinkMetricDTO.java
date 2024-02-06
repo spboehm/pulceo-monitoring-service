@@ -1,6 +1,7 @@
 package dev.pulceo.pms.dto.metrics;
 
 import com.influxdb.query.FluxRecord;
+import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -23,8 +24,10 @@ public class NodeLinkMetricDTO {
     private String linkUUID;
     private String startTime;
     private String endTime;
+    private double value;
+    private String unit;
 
-    public static NodeLinkMetricDTO fromFluxRecord(FluxRecord record, MetricRequest metricRequest) {
+    public static NodeLinkMetricDTO fromFluxRecord(FluxRecord record, MetricRequest metricRequest, String unit) {
         return NodeLinkMetricDTO.builder()
                 .metricUUID(UUID.fromString(record.getValueByKey("metricUUID").toString()))
                 .metricType(record.getValueByKey("metricType").toString())
@@ -32,7 +35,21 @@ public class NodeLinkMetricDTO {
                 .linkUUID(metricRequest.getLinkUUID().toString())
                 .startTime(record.getValueByKey("startTime").toString())
                 .endTime(record.getValueByKey("endTime").toString())
+                .value(Double.valueOf(record.getValueByKey("_value").toString()))
+                .unit(unit)
                 .build();
     }
 
+    public static NodeLinkMetricDTO fromNodeLinkMetric(NodeLinkMetric nodeLinkMetric) {
+        return NodeLinkMetricDTO.builder()
+                .metricUUID(nodeLinkMetric.getUuid())
+                .metricType(nodeLinkMetric.getMetricType())
+                .metricRequestUUID(nodeLinkMetric.getMetricRequestUUID())
+                .linkUUID(nodeLinkMetric.getLinkUUID())
+                .startTime(nodeLinkMetric.getStartTime())
+                .endTime(nodeLinkMetric.getEndTime())
+                .value(nodeLinkMetric.getVal())
+                .unit(nodeLinkMetric.getUnit())
+                .build();
+    }
 }

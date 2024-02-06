@@ -20,7 +20,7 @@ public class MetricRequest extends BaseEntity {
     // uuid in superclass
     private UUID remoteMetricRequestUUID; // jobUUID on device
     private UUID linkUUID; // global link UUID
-    private UUID remoteLinkUUID;
+    private UUID remoteLinkUUID; // remoteLinkUUID on device
     private String type;
     private String recurrence;
     // TODO: add transformer

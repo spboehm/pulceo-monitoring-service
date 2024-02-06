@@ -7,4 +7,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 public class InfluxDBServiceIntegrationTests {
 
+    @Test
+    public void test() {
+
+    }
+
 }

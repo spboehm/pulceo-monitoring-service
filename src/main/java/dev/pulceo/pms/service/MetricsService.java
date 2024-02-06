@@ -7,6 +7,7 @@ import dev.pulceo.pms.exception.MetricsServiceException;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
 import dev.pulceo.pms.repository.MetricRequestRepository;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.geo.Metric;
@@ -23,13 +24,16 @@ public class MetricsService {
     // ws
     private final SimpMessagingTemplate simpMessagingTemplate;
 
+    private final InfluxDBService influxDBService;
+
     @Value("${prm.endpoint}")
     private String prmEndpoint;
 
     @Autowired
-    public MetricsService(MetricRequestRepository metricRequestRepository, SimpMessagingTemplate simpMessagingTemplate) {
+    public MetricsService(MetricRequestRepository metricRequestRepository, SimpMessagingTemplate simpMessagingTemplate, InfluxDBService influxDBService) {
         this.metricRequestRepository = metricRequestRepository;
         this.simpMessagingTemplate = simpMessagingTemplate;
+        this.influxDBService = influxDBService;
     }
 
     // ws
@@ -84,8 +88,22 @@ public class MetricsService {
                 .block();
         // TODO: set link UUID to achieve an appropriate mapping
         metricRequest.setLinkUUID(icmpRttMetricRequest.getLinkUUID());
+        MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
         // TODO: do conversion to DTO and persist then in database
-        return this.metricRequestRepository.save(metricRequest);
+        this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+        return savedMetricRequest;
     }
+
+    @PostConstruct
+    void init() {
+        // inform InfluxDBService about metric requests
+        this.metricRequestRepository.findAll().forEach(metricRequest -> {
+            this.influxDBService.notifyAboutNewMetricRequest(metricRequest);
+        });
+    }
+
+    // TODO: on startup inform InfluxDBService about all existing metric requests that are in DB
+
+    // TODO: on shutdown inform InfluxDBService to stop all running metric requests
 
 }

@@ -5,9 +5,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
+import com.influxdb.client.QueryApi;
 import com.influxdb.client.WriteApiBlocking;
 import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
+import com.influxdb.query.FluxRecord;
+import com.influxdb.query.FluxTable;
+import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
+import dev.pulceo.pms.model.metricrequests.MetricRequest;
+import dev.pulceo.pms.util.InfluxQueryBuilder;
 import dev.pulceo.pms.util.JsonToInfluxDataConverter;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -22,8 +28,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -49,9 +57,11 @@ public class InfluxDBService {
 
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
-    private MetricsService metricsService;
-
     private final SimpMessagingTemplate simpMessagingTemplate;
+
+    private final ConcurrentHashMap<UUID, MetricRequest> metricRequests = new ConcurrentHashMap<>();
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate) {
@@ -86,17 +96,34 @@ public class InfluxDBService {
                 writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
                 logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
                 // TODO: check for running metric-requests, send raw data
-                simpMessagingTemplate.convertAndSend("/metrics/raw", payLoadAsJson);
+                JsonNode metric = this.objectMapper.readTree(payLoadAsJson);
+                // convert from jobUUID to remoteLinkUUID
+                UUID remoteMetricRequestUUID = UUID.fromString(metric.get("metric").get("jobUUID").asText());
+                if (metricRequests.containsKey(remoteMetricRequestUUID)) {
+                    MetricRequest metricRequest = metricRequests.get(remoteMetricRequestUUID);
+                    // TODO: determine type of metric, transformer and send to endpoint
+                    switch (metricRequest.getType()) {
+                        case "icmp-rtt":
+                            String queryString = InfluxQueryBuilder.queryLastRawRecord(bucket, "ICMP_RTT", "rttAvg", metricRequest.getRemoteMetricRequestUUID().toString());
+                            QueryApi queryApi = influxDBClient.getQueryApi();
+                            List<FluxTable> tables = queryApi.query(queryString);
+                            for (FluxTable table : tables) {
+                                List<FluxRecord> records = table.getRecords();
+                                for (FluxRecord record : records) {
+                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(NodeLinkMetricDTO.fromFluxRecord(record, metricRequest)));
+                                    // TODO: store back to influxDB for achiving purposes
 
-                // TODO: retrieve the processing rules
-                // Input: remoteLinkUUID, metricRequest UUID, transformer function
-
-
-                // TODO: broadcast to processing endpoints (ws)
-
-                // TODO: store data
-
-
+                                    // TODO: store for fast access in a cache stat it can be retrieved by the frontend
+                                }
+                            }
+                            break;
+                        default:
+                            logger.error("Unknown metric type: " + metricRequest.getType());
+                            break;
+                    }
+                } else {
+                    logger.error("Unkown metric request UUID: " + remoteMetricRequestUUID);
+                }
             }
         } catch (InterruptedException e) {
             logger.info("InfluxDBService received termination signal...shutdown initiated");
@@ -106,23 +133,22 @@ public class InfluxDBService {
         }
     }
 
+    private void queryData(String query) {
+        try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
+            QueryApi queryApi = influxDBClient.getQueryApi();
 
-    public void process() {
-
+            List<FluxTable> tables = queryApi.query(InfluxQueryBuilder.queryLastRawRecord(bucket, "ICMP_RTT", "rttAvg", "54d9ce34-46af-49af-b612-6164270d7a24"));
+            for (FluxTable table : tables) {
+                List<FluxRecord> records = table.getRecords();
+                for (FluxRecord record : records) {
+                    logger.info("Record: " + record.getValues());
+                }
+            }
+        }
     }
 
-    public void processNetworkMeasurement() {
-
-        // do mean
-        // moving average
-        // median
-
-        // by windows
-
+    public void notifyAboutNewMetricRequest(MetricRequest metricRequest) {
+        System.out.println("added " + metricRequest.getRemoteMetricRequestUUID());
+        this.metricRequests.put(metricRequest.getRemoteMetricRequestUUID(), metricRequest);
     }
-
-    public void processNodeMeasurement() {
-
-    }
-
 }

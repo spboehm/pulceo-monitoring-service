@@ -159,7 +159,7 @@ public class MetricsService {
                 })
                 .block();
         // TODO: set link UUID to achieve an appropriate mapping
-        metricRequest.setLinkUUID(createNewMetricRequestTcpBwDTO.getLinkUUID());
+        metricRequest.setLinkUUID(tcpBwMetricRequest.getLinkUUID());
         // TODO: do conversion to DTO and persist then in database
         MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
         // then send the request to the correct pna

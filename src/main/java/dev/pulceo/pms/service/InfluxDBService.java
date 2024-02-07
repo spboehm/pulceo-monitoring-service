@@ -122,6 +122,20 @@ public class InfluxDBService {
                                 }
                             }
                             break;
+                        case "tcp-bw":
+                            String queryStringTcpBw = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_BW", "bitrate", metricRequest.getRemoteMetricRequestUUID().toString());
+                            QueryApi queryApiTcpBw = influxDBClient.getQueryApi();
+                            List<FluxTable> tablesTcpBw = queryApiTcpBw.query(queryStringTcpBw);
+                            for (FluxTable table : tablesTcpBw) {
+                                List<FluxRecord> records = table.getRecords();
+                                for (FluxRecord record : records) {
+                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "Mbit/s");
+                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                    // store for archiving purposes and fast access
+                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                }
+                            }
+                            break;
                         default:
                             logger.error("Unknown metric type: " + metricRequest.getType());
                             break;

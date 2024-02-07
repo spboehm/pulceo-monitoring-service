@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
+import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
 import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.WireMockSpring;
+import org.springframework.data.geo.Metric;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.Arrays;
@@ -89,10 +91,61 @@ public class MetricsServiceIntegrationTests {
         MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(icmpRttMetricRequest);
 
         // then
+        // TODO: further evaluations
         assertEquals(icmpRttMetricRequest.getLinkUUID(), metricRequest.getRemoteLinkUUID());
         assertEquals(icmpRttMetricRequest.getType(), metricRequest.getType());
         assertEquals(icmpRttMetricRequest.getRecurrence(), metricRequest.getRecurrence());
         assertEquals(icmpRttMetricRequest.isEnabled(), metricRequest.isEnabled());
+    }
+
+    @Test
+    public void testCreateNewMetricRequestTcpBw () {
+        // given
+        UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
+        UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
+        TcpBwMetricRequest tcpBwMetricRequest = TcpBwMetricRequest.builder()
+                .port(5000)
+                .linkUUID(linkUUID)
+                .type("tcp-bw")
+                .recurrence("15")
+                .enabled(true)
+                .build();
+        // mock link request to pna
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/links/" + linkUUID))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("link/prm-read-link-by-uuid-response.json")));
+
+        // mock link request to pna => done in SimulatedPnaAgent
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/nodes/" + srcNodeUUID))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("node/prm-read-node-by-uuid-response.json")));
+
+        // mock start creation of Iperf3-Server
+        MetricsServiceIntegrationTests.wireMockServerForPNA.stubFor(post(urlEqualTo("/api/v1/iperf3-servers"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody("5000")));
+
+        // mock metric request to prm
+        MetricsServiceIntegrationTests.wireMockServerForPNA.stubFor(post(urlEqualTo("/api/v1/links/ea9084cf-97bb-451e-8220-4bcda327839e/metric-requests/tcp-bw-requests"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("metricrequests/create-new-tcp-bw-request-response.json")));
+
+        // when
+        MetricRequest metricRequest = this.metricsService.createNewTcpBwMetricRequest(tcpBwMetricRequest);
+
+        // then
+        // TODO: further evaluations
+        assertEquals(tcpBwMetricRequest.getLinkUUID(), metricRequest.getRemoteLinkUUID());
+        assertEquals(tcpBwMetricRequest.getType(), metricRequest.getType());
+        assertEquals(tcpBwMetricRequest.getRecurrence(), metricRequest.getRecurrence());
+        assertEquals(tcpBwMetricRequest.isEnabled(), metricRequest.isEnabled());
     }
 
     @Test

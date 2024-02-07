@@ -1,5 +1,5 @@
 package dev.pulceo.pms.model.metricrequests;
 
 public enum InternalMetricType {
-    ICMP_RTT
+    ICMP_RTT, TCP_BW
 }

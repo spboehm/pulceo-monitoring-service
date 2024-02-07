@@ -1,13 +1,11 @@
 package dev.pulceo.pms.controller;
 
-import dev.pulceo.pms.dto.metricrequests.CreateNewAbstractMetricRequestDTO;
-import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestIcmpRttDTO;
-import dev.pulceo.pms.dto.metricrequests.MetricRequestDTOType;
-import dev.pulceo.pms.dto.metricrequests.ShortMetricResponseDTO;
+import dev.pulceo.pms.dto.metricrequests.*;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
+import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
 import dev.pulceo.pms.service.MetricsService;
 import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +43,10 @@ public class MetricsController {
         if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.ICMP_RTT) {
             CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
             MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(IcmpRttMetricRequest.fromCreateNewMetricRequestIcmpRttDTO(createNewMetricRequestIcmpRttDTO));
+            return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
+        } else if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.TCP_BW) {
+            CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
+            MetricRequest metricRequest = this.metricsService.createNewTcpBwMetricRequest(TcpBwMetricRequest.fromCreateNewMetricRequestTcpBwDTO(createNewMetricRequestTcpBwDTO));
             return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
         }
         return ResponseEntity.status(400).build();

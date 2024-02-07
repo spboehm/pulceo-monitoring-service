@@ -17,10 +17,25 @@ public class CreateNewMetricRequestTcpBwDTO extends CreateNewAbstractMetricReque
     private String type;
     private String recurrence;
     private boolean enabled;
-    private long port;
+    // ignored by svc
+    @Builder.Default
+    private long port = 5000;
     @Builder.Default
     private int bitrate = 0;
     @Builder.Default
     private int time = 10;
+
+    public static CreateNewMetricRequestTcpBwDTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
+        CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = (CreateNewMetricRequestTcpBwDTO) createNewAbstractMetricRequestDTO;
+        return CreateNewMetricRequestTcpBwDTO.builder()
+                .linkUUID(createNewMetricRequestTcpBwDTO.getLinkUUID())
+                .type(createNewMetricRequestTcpBwDTO.getType())
+                .recurrence(createNewMetricRequestTcpBwDTO.getRecurrence())
+                .enabled(createNewMetricRequestTcpBwDTO.isEnabled())
+                .port(createNewMetricRequestTcpBwDTO.getPort())
+                .bitrate(createNewMetricRequestTcpBwDTO.getBitrate())
+                .time(createNewMetricRequestTcpBwDTO.getTime())
+                .build();
+    }
 
 }

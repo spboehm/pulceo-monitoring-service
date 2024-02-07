@@ -1,5 +1,6 @@
 package dev.pulceo.pms.model.metricrequests;
 
+import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestTcpBwDTO;
 import jakarta.persistence.Entity;
 import lombok.Builder;
 import lombok.Getter;
@@ -24,4 +25,16 @@ public class TcpBwMetricRequest extends AbstractMetricRequest {
     private int bitrate = 0;
     @Builder.Default
     private int time = 10;
+
+    public static TcpBwMetricRequest fromCreateNewMetricRequestTcpBwDTO(CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO) {
+        return TcpBwMetricRequest.builder()
+                .linkUUID(createNewMetricRequestTcpBwDTO.getLinkUUID())
+                .type(createNewMetricRequestTcpBwDTO.getType())
+                .recurrence(createNewMetricRequestTcpBwDTO.getRecurrence())
+                .enabled(createNewMetricRequestTcpBwDTO.isEnabled())
+                .port(createNewMetricRequestTcpBwDTO.getPort())
+                .bitrate(createNewMetricRequestTcpBwDTO.getBitrate())
+                .time(createNewMetricRequestTcpBwDTO.getTime())
+                .build();
+    }
 }

@@ -1,0 +1,16 @@
+{
+  "uuid": "d6421210-6759-4973-bad3-7f47bcb133c1",
+  "providerName": "default",
+  "hostname": "127.0.0.2",
+  "pnaUUID": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "node": {
+    "name": "127.0.0.2",
+    "type": "EDGE",
+    "layer": 1,
+    "role": "WORKLOAD",
+    "nodeLocationCountry": "",
+    "nodeLocationCity": "",
+    "nodeLocationLongitude": 0.0,
+    "nodeLocationLatitude": 0.0
+  }
+}

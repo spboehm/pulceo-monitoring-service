@@ -106,8 +106,8 @@ public class MetricsService {
     public MetricRequest createNewTcpBwMetricRequest(TcpBwMetricRequest tcpBwMetricRequest) {
         // linkUUID - on device
         // TODO: check if link does already exist
-        WebClient webClient = WebClient.create(this.prmEndpoint);
-        NodeLinkDTO nodeLinkDTO = webClient.get()
+        WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
+        NodeLinkDTO nodeLinkDTO = webClientToPRM.get()
                 .uri("/api/v1/links/" + tcpBwMetricRequest.getLinkUUID()) // on cloud
                 .retrieve()
                 .bodyToMono(NodeLinkDTO.class)
@@ -120,7 +120,7 @@ public class MetricsService {
 
         // first obtain the hostname
         UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
-        NodeDTO srcNode = webClient.get()
+        NodeDTO srcNode = webClientToPRM.get()
                 .uri("/api/v1/nodes/" + srcNodeUUID)
                 .retrieve()
                 .bodyToMono(NodeDTO.class)
@@ -129,9 +129,20 @@ public class MetricsService {
                 })
                 .block();
 
+        // destNode start iperf3 server
+        UUID destNodeUUID = nodeLinkDTO.getDestNodeUUID();
+        NodeDTO destNode = webClientToPRM.get()
+                .uri("/api/v1/nodes/" + destNodeUUID)
+                .retrieve()
+                .bodyToMono(NodeDTO.class)
+                .onErrorResume(error -> {
+                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
+                })
+                .block();
+
         // create new iperf-server using iperf3 server controller
-        WebClient webclientToPNA = WebClient.create("http://" + srcNode.getHostname() + ":7676");
-                String portOfRemoteIperfServer = webclientToPNA.post()
+        WebClient webClientToDestNode = WebClient.create("http://" + destNode.getHostname() + ":7676");
+                String portOfRemoteIperfServer = webClientToDestNode.post()
                 .uri("/api/v1/iperf3-servers")
                 .retrieve()
                 .bodyToMono(String.class)
@@ -149,6 +160,7 @@ public class MetricsService {
                 .enabled(tcpBwMetricRequest.isEnabled())
                 .build();
 
+        WebClient webclientToPNA = WebClient.create("http://" + srcNode.getHostname() + ":7676");
         MetricRequest metricRequest = webclientToPNA.post()
                 .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-bw-requests")
                 .bodyValue(createNewMetricRequestTcpBwDTO)
@@ -158,7 +170,7 @@ public class MetricsService {
                     throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
                 })
                 .block();
-        // TODO: set link UUID to achieve an appropriate mapping
+        // TODO: set link UUID to achieve an appropriate mapping in cloud
         metricRequest.setLinkUUID(tcpBwMetricRequest.getLinkUUID());
         // TODO: do conversion to DTO and persist then in database
         MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);

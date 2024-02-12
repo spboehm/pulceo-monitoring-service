@@ -35,24 +35,28 @@ public class MetricsServiceIntegrationTests {
     // for some reason `dynamicPort()` is not working properly
     public static WireMockServer wireMockServerForPRM = new WireMockServer(WireMockSpring.options().bindAddress("127.0.0.1").port(7878));
     public static WireMockServer wireMockServerForPNA = new WireMockServer(WireMockSpring.options().bindAddress("127.0.0.1").port(7676));
+    public static WireMockServer wireMockServerForDestPNA = new WireMockServer(WireMockSpring.options().bindAddress("127.0.0.2").port(7676));
 
     @BeforeAll
     static void setupClass() throws InterruptedException {
         Thread.sleep(100);
         MetricsServiceIntegrationTests.wireMockServerForPRM.start();
         MetricsServiceIntegrationTests.wireMockServerForPNA.start();
+        MetricsServiceIntegrationTests.wireMockServerForDestPNA.start();
     }
 
     @AfterEach
     void after() {
-        MetricsServiceIntegrationTests.wireMockServerForPRM.resetAll();
-        MetricsServiceIntegrationTests.wireMockServerForPNA.resetAll();
+//        MetricsServiceIntegrationTests.wireMockServerForPRM.resetAll();
+//        MetricsServiceIntegrationTests.wireMockServerForPNA.resetAll();
+//        MetricsServiceIntegrationTests.wireMockServerForDestPNA.resetAll();
     }
 
     @AfterAll
     static void clean() {
         MetricsServiceIntegrationTests.wireMockServerForPRM.shutdown();
         MetricsServiceIntegrationTests.wireMockServerForPNA.shutdown();
+        MetricsServiceIntegrationTests.wireMockServerForDestPNA.shutdown();
     }
 
     @Test
@@ -102,6 +106,7 @@ public class MetricsServiceIntegrationTests {
     public void testCreateNewMetricRequestTcpBw () {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
+        UUID destNodeUUID = UUID.fromString("d6421210-6759-4973-bad3-7f47bcb133c1");
         UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
         TcpBwMetricRequest tcpBwMetricRequest = TcpBwMetricRequest.builder()
                 .port(5000)
@@ -122,10 +127,16 @@ public class MetricsServiceIntegrationTests {
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBodyFile("node/prm-read-node-by-uuid-response.json")));
+                        .withBodyFile("node/prm-read-node-by-uuid-1-response.json")));
+
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/nodes/" + destNodeUUID))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("node/prm-read-node-by-uuid-2-response.json")));
 
         // mock start creation of Iperf3-Server
-        MetricsServiceIntegrationTests.wireMockServerForPNA.stubFor(post(urlEqualTo("/api/v1/iperf3-servers"))
+        MetricsServiceIntegrationTests.wireMockServerForDestPNA.stubFor(post(urlEqualTo("/api/v1/iperf3-servers"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withBody("5000")));

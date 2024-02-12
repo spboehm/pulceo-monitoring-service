@@ -50,19 +50,21 @@ public class MetricsControllerTests {
     static void setupClass() {
         MetricsServiceIntegrationTests.wireMockServerForPRM.start();
         MetricsServiceIntegrationTests.wireMockServerForPNA.start();
+        MetricsServiceIntegrationTests.wireMockServerForDestPNA.start();
     }
 
     @AfterEach
     void after() {
         MetricsServiceIntegrationTests.wireMockServerForPRM.resetAll();
         MetricsServiceIntegrationTests.wireMockServerForPNA.resetAll();
-
+        MetricsServiceIntegrationTests.wireMockServerForDestPNA.resetAll();
     }
 
     @AfterAll
     static void clean() {
         MetricsServiceIntegrationTests.wireMockServerForPRM.shutdown();
         MetricsServiceIntegrationTests.wireMockServerForPNA.shutdown();
+        MetricsServiceIntegrationTests.wireMockServerForPNA.resetAll();
     }
 
     @Test
@@ -120,7 +122,7 @@ public class MetricsControllerTests {
         // mock link request to pan
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
-
+        UUID destNodeUUID = UUID.fromString("d6421210-6759-4973-bad3-7f47bcb133c1");
         // mock link request to pna
         MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/links/" + linkUUID))
                 .willReturn(aResponse()
@@ -133,10 +135,16 @@ public class MetricsControllerTests {
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBodyFile("node/prm-read-node-by-uuid-response.json")));
+                        .withBodyFile("node/prm-read-node-by-uuid-1-response.json")));
+
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/nodes/" + destNodeUUID))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("node/prm-read-node-by-uuid-2-response.json")));
 
         // mock start creation of Iperf3-Server
-        MetricsServiceIntegrationTests.wireMockServerForPNA.stubFor(WireMock.post(urlEqualTo("/api/v1/iperf3-servers"))
+        MetricsServiceIntegrationTests.wireMockServerForDestPNA.stubFor(WireMock.post(urlEqualTo("/api/v1/iperf3-servers"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withBody("5000")));

@@ -88,6 +88,7 @@ public class MetricsService {
         // TODO: proper DTO conversion
         MetricRequest metricRequest = webClient.post()
                 .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/icmp-rtt-requests")
+                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
                 .bodyValue(createNewMetricRequestIcmpRttDTO)
                 .retrieve()
                 .bodyToMono(MetricRequest.class)
@@ -129,6 +130,7 @@ public class MetricsService {
                 })
                 .block();
 
+
         // destNode start iperf3 server
         UUID destNodeUUID = nodeLinkDTO.getDestNodeUUID();
         NodeDTO destNode = webClientToPRM.get()
@@ -144,6 +146,7 @@ public class MetricsService {
         WebClient webClientToDestNode = WebClient.create("http://" + destNode.getHostname() + ":7676");
                 String portOfRemoteIperfServer = webClientToDestNode.post()
                 .uri("/api/v1/iperf3-servers")
+                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(destNodeUUID))
                 .retrieve()
                 .bodyToMono(String.class)
                 .onErrorResume(error -> {
@@ -163,6 +166,7 @@ public class MetricsService {
         WebClient webclientToPNA = WebClient.create("http://" + srcNode.getHostname() + ":7676");
         MetricRequest metricRequest = webclientToPNA.post()
                 .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-bw-requests")
+                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
                 .bodyValue(createNewMetricRequestTcpBwDTO)
                 .retrieve()
                 .bodyToMono(MetricRequest.class)
@@ -177,6 +181,19 @@ public class MetricsService {
         // then send the request to the correct pna
         this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
         return savedMetricRequest;
+    }
+
+    private String getPnaTokenByNodeUUID(UUID nodeUUID) {
+        WebClient webClient = WebClient.create(this.prmEndpoint);
+        String pnaToken = webClient.get()
+                .uri("/api/v1/nodes/" + nodeUUID + "/pna-token")
+                .retrieve()
+                .bodyToMono(String.class)
+                .onErrorResume(error -> {
+                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(nodeUUID)));
+                })
+                .block();
+        return pnaToken;
     }
 
     @PostConstruct

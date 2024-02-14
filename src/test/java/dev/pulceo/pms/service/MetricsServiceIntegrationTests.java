@@ -1,6 +1,7 @@
 package dev.pulceo.pms.service;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
@@ -91,6 +92,20 @@ public class MetricsServiceIntegrationTests {
                         .withHeader("Content-Type", "application/json")
                         .withBodyFile("metricrequests/create-new-icmp-rtt-request-response.json")));
 
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
+
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/ea9084cf-97bb-451e-8220-4bdda327839e/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
+
         // when
         MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(icmpRttMetricRequest);
 
@@ -134,6 +149,20 @@ public class MetricsServiceIntegrationTests {
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBodyFile("node/prm-read-node-by-uuid-2-response.json")));
+
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
+
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/d6421210-6759-4973-bad3-7f47bcb133c1/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
 
         // mock start creation of Iperf3-Server
         MetricsServiceIntegrationTests.wireMockServerForDestPNA.stubFor(post(urlEqualTo("/api/v1/iperf3-servers"))

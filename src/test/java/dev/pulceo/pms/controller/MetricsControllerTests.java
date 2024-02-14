@@ -94,6 +94,20 @@ public class MetricsControllerTests {
                         .withHeader("Content-Type", "application/json")
                         .withBodyFile("metricrequests/create-new-icmp-rtt-request-response.json")));
 
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
+
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/d6421210-6759-4973-bad3-7f47bcb133c1/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
+
 
         CreateNewAbstractMetricRequestDTO createNewMetricRequestDTO = CreateNewMetricRequestIcmpRttDTO.builder()
                 .metricRequestDTOType(MetricRequestDTOType.ICMP_RTT)
@@ -155,6 +169,20 @@ public class MetricsControllerTests {
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBodyFile("metricrequests/create-new-tcp-bw-request-response.json")));
+
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
+
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/d6421210-6759-4973-bad3-7f47bcb133c1/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
 
         CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwDTO.builder()
                 .metricRequestDTOType(MetricRequestDTOType.TCP_BW)

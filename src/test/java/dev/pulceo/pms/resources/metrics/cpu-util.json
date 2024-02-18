@@ -1,0 +1,21 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "315ff74c-5fae-45fa-9fcc-ec592c39e76c",
+    "jobUUID": "729c57cc-5796-4b07-b89d-3f5f80f6a053",
+    "metricType": "CPU_UTIL",
+    "metricResult": {
+      "sourceHost": "127.0.0.1",
+      "k8sResourceType": "NODE",
+      "resourceName": "k3d-pna-test-server-0",
+      "time": "2024-02-18T11:56:10Z",
+      "cpuUtilizationMeasurement": {
+        "uuid": "52367e1d-e69f-41cf-9cee-65d2945f0bdd",
+        "time": "2024-02-18T11:56:10Z",
+        "usageNanoCores": 39113293,
+        "usageCoreNanoSeconds": 247131680000,
+        "usageCPUPercentage": 2.44
+      }
+    }
+  }
+}

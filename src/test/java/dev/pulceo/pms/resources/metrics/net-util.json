@@ -1,0 +1,21 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "4ed06f92-e9c7-493f-94b5-8d0ad38b92b2",
+    "jobUUID": "2b933e2f-d2be-44c7-afdc-bf35b257e5b4",
+    "metricType": "NET_UTIL",
+    "metricResult": {
+      "sourceHost": "127.0.0.1",
+      "k8sResourceType": "NODE",
+      "resourceName": "k3d-pna-test-server-0",
+      "time": "2024-02-18T11:56:20Z",
+      "networkUtilizationMeasurement": {
+        "uuid": "6fb02e75-51da-45fe-ab07-55054ab94653",
+        "time": "2024-02-18T11:56:20Z",
+        "iface": "eth0",
+        "rxBytes": 2520547,
+        "txBytes": 7199902
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "2f0157c8-a00a-4d91-a285-8c0a22a3fd44",
+    "jobUUID": "18d3b2b1-f659-485c-8db0-0c47303fd68c",
+    "metricType": "MEM_UTIL",
+    "metricResult": {
+      "sourceHost": "127.0.0.1",
+      "k8sResourceType": "NODE",
+      "resourceName": "k3d-pna-test-server-0",
+      "time": "2024-02-18T11:59:50Z",
+      "memoryUtilizationMeasurement": {
+        "uuid": "11684d9c-2cba-4c58-95c9-a43b965c0d25",
+        "time": "2024-02-18T11:59:50Z",
+        "usageBytes": 1054355456,
+        "availableBytes": 66505011200,
+        "usageMemoryPercentage": 1.5699999
+      }
+    }
+  }
+}

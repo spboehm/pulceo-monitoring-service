@@ -18,6 +18,58 @@ public class JsonToInfluxDataConverterTests {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @Test
+    public void testConvertFromCPUUtilMetric() throws IOException {
+        // given
+        File jsonFile = new File("src/test/java/dev/pulceo/pms/resources/metrics/cpu-util.json");
+        String jsonAsString = mapper.readTree(jsonFile).toString();
+
+        // when
+        List<Point> listOfPoints = JsonToInfluxDataConverter.convertMetric(jsonAsString);
+
+        // then
+        assertEquals("CPU_UTIL,deviceId=0247fea1-3ca3-401b-8fa2-b6f83a469680,jobUUID=729c57cc-5796-4b07-b89d-3f5f80f6a053,k8sResourceType=NODE,metricType=CPU_UTIL,metricUUID=315ff74c-5fae-45fa-9fcc-ec592c39e76c,resourceName=k3d-pna-test-server-0,sourceHost=127.0.0.1,time=2024-02-18T11:56:10Z usageCPUPercentage=2.44,usageCoreNanoSeconds=247131680000i,usageNanoCores=39113293i", listOfPoints.get(0).toLineProtocol());
+    }
+
+    @Test
+    public void testConvertMEMUtilMetric() throws Exception {
+        // given
+        File jsonFile = new File("src/test/java/dev/pulceo/pms/resources/metrics/mem-util.json");
+        String jsonAsString = mapper.readTree(jsonFile).toString();
+
+        // when
+        List<Point> listOfPoints = JsonToInfluxDataConverter.convertMetric(jsonAsString);
+
+        // then
+        assertEquals("MEM_UTIL,deviceId=0247fea1-3ca3-401b-8fa2-b6f83a469680,jobUUID=18d3b2b1-f659-485c-8db0-0c47303fd68c,k8sResourceType=NODE,metricType=MEM_UTIL,metricUUID=2f0157c8-a00a-4d91-a285-8c0a22a3fd44,resourceName=k3d-pna-test-server-0,sourceHost=127.0.0.1,time=2024-02-18T11:59:50Z availableBytes=66505011200i,usageBytes=1054355456i,usageMemoryPercentage=1.5699999", listOfPoints.get(0).toLineProtocol());
+    }
+
+    @Test
+    public void testConvertNetUtilMetrics() throws Exception {
+        // given
+        File jsonFile = new File("src/test/java/dev/pulceo/pms/resources/metrics/net-util.json");
+        String jsonAsString = mapper.readTree(jsonFile).toString();
+
+        // when
+        List<Point> listOfPoints = JsonToInfluxDataConverter.convertMetric(jsonAsString);
+
+        // then
+        assertEquals("NET_UTIL,deviceId=0247fea1-3ca3-401b-8fa2-b6f83a469680,iface=eth0,jobUUID=2b933e2f-d2be-44c7-afdc-bf35b257e5b4,k8sResourceType=NODE,metricType=NET_UTIL,metricUUID=4ed06f92-e9c7-493f-94b5-8d0ad38b92b2,resourceName=k3d-pna-test-server-0,sourceHost=127.0.0.1,time=2024-02-18T11:56:20Z rxBytes=2520547i,txBytes=7199902i", listOfPoints.get(0).toLineProtocol());
+    }
+
+    @Test
+    public void testConvertStorageUtilMetrics() throws Exception {
+        // given
+        File jsonFile = new File("src/test/java/dev/pulceo/pms/resources/metrics/storage-util.json");
+        String jsonAsString = mapper.readTree(jsonFile).toString();
+
+        // when
+        List<Point> listOfPoints = JsonToInfluxDataConverter.convertMetric(jsonAsString);
+
+        // then
+        assertEquals("STORAGE_UTIL,deviceId=0247fea1-3ca3-401b-8fa2-b6f83a469680,jobUUID=e8ae8d97-0859-4e86-9163-928870c716dc,k8sResourceType=NODE,metricType=STORAGE_UTIL,metricUUID=ff161744-37df-4927-9f47-50db763b02be,resourceName=k3d-pna-test-server-0,sourceHost=127.0.0.1,time=2024-02-18T11:56:20Z availableBytes=497419288576i,usageBytes=363328516096i,usageStoragePercentage=73.04", listOfPoints.get(0).toLineProtocol());
+    }
+
+    @Test
     public void testConvertFromICMPRTTMetric() throws IOException {
         // given
         File jsonFile = new File("src/test/java/dev/pulceo/pms/resources/metrics/icmp-rtt.json");

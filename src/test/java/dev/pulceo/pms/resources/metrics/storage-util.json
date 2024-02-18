@@ -1,0 +1,22 @@
+{
+  "deviceId": "0247fea1-3ca3-401b-8fa2-b6f83a469680",
+  "metric": {
+    "metricUUID": "ff161744-37df-4927-9f47-50db763b02be",
+    "jobUUID": "e8ae8d97-0859-4e86-9163-928870c716dc",
+    "metricType": "STORAGE_UTIL",
+    "metricResult": {
+      "sourceHost": "127.0.0.1",
+      "k8sResourceType": "NODE",
+      "resourceName": "k3d-pna-test-server-0",
+      "time": "2024-02-18T11:56:20Z",
+      "storageUtilizationMeasurement": {
+        "uuid": "28440e29-642b-4b8d-a41b-b5277fea3ca1",
+        "time": "2024-02-18T11:56:20Z",
+        "name": "k3d-pna-test-server-0-fs",
+        "usedBytes": 363328516096,
+        "capacityBytes": 497419288576,
+        "usageStoragePercentage": 73.04
+      }
+    }
+  }
+}

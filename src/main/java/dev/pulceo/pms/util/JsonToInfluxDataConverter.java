@@ -98,7 +98,7 @@ public class JsonToInfluxDataConverter {
         point.addTag("sourceHost", jsonNode.get("metric").get("metricResult").get("sourceHost").asText());
         point.addTag("k8sResourceType", jsonNode.get("metric").get("metricResult").get("k8sResourceType").asText());
         point.addTag("resourceName", jsonNode.get("metric").get("metricResult").get("resourceName").asText());
-        point.addTag("time", jsonNode.get("metric").get("metricResult").get("time").asText());
+        point.addTag("timestamp", jsonNode.get("metric").get("metricResult").get("time").asText());
     }
 
     private static void addNetworkMetricDataAsTags(JsonNode jsonNode, Point point) {

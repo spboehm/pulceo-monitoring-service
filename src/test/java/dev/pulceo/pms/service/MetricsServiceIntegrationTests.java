@@ -3,6 +3,7 @@ package dev.pulceo.pms.service;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
+import dev.pulceo.pms.model.metricrequests.CPUUtilMetricRequest;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
 import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
@@ -189,6 +190,50 @@ public class MetricsServiceIntegrationTests {
     }
 
     @Test
+    public void testCreateNewCpuUtilMetricRequest() {
+        // given
+        UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
+        CPUUtilMetricRequest cpuUtilMetricRequest = CPUUtilMetricRequest.builder()
+                .nodeUUID(srcNodeUUID)
+                .type("cpu-util")
+                .recurrence("15")
+                .enabled(true)
+                .build();
+
+        // TODO: add mocks
+        // mock link request to pna => done in SimulatedPnaAgent
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(get(urlEqualTo("/api/v1/nodes/" + srcNodeUUID))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("node/prm-read-node-by-uuid-1-response.json")));
+
+        // mock metric request to prm (pna-token)
+        MetricsServiceIntegrationTests.wireMockServerForPRM.stubFor(WireMock.get(urlEqualTo("/api/v1/nodes/0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3/pna-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("")));
+
+        // mock metric request to pna with cpu-util-request
+        MetricsServiceIntegrationTests.wireMockServerForPNA.stubFor(post(urlEqualTo("/api/v1/nodes/localNode/metric-requests"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("metricrequests/create-new-cpu-util-request-response.json")));
+
+        // when
+        MetricRequest metricRequest = this.metricsService.createNewCpuUtilMetricRequest(cpuUtilMetricRequest);
+
+        // then
+        assertEquals(cpuUtilMetricRequest.getNodeUUID(), metricRequest.getRemoteLinkUUID());
+        assertEquals(cpuUtilMetricRequest.getType(), metricRequest.getType());
+        assertEquals(cpuUtilMetricRequest.getRecurrence(), metricRequest.getRecurrence());
+        assertEquals(cpuUtilMetricRequest.isEnabled(), metricRequest.isEnabled());
+
+    }
+
+    @Test
     public void testFindLastNodeLinkMetricsByLinkUUIDAndMetricType() {
         // given
         String linkUUID = "08d039b3-e4e3-4258-a9f5-5967c6a5e024";
@@ -218,6 +263,5 @@ public class MetricsServiceIntegrationTests {
         // then
         assertEquals(2, nodeLinkMetrics.size());
     }
-
 
 }

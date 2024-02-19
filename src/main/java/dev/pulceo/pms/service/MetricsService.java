@@ -1,11 +1,15 @@
 package dev.pulceo.pms.service;
 
 import dev.pulceo.pms.dto.link.NodeLinkDTO;
+import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestCPUUtilDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestIcmpRttDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestTcpBwDTO;
+import dev.pulceo.pms.dto.metricrequests.pna.CreateNewResourceUtilizationDTO;
+import dev.pulceo.pms.dto.metricrequests.pna.ShortNodeMetricResponseDTO;
 import dev.pulceo.pms.dto.node.NodeDTO;
 import dev.pulceo.pms.exception.MetricsServiceException;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
+import dev.pulceo.pms.model.metricrequests.CPUUtilMetricRequest;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
 import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
@@ -14,6 +18,7 @@ import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.integration.json.JsonPathUtils;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -211,6 +216,50 @@ public class MetricsService {
             resultList.add(this.nodeLinkMetricRepository.findLastLinkUUIDAndByMetricType(String.valueOf(linkUUID), type));
         }
         return resultList;
+    }
+
+    public MetricRequest createNewCpuUtilMetricRequest(CPUUtilMetricRequest cpuUtilMetricRequest) {
+        WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
+
+        // first obtain the hostname
+        UUID srcNodeUUID = cpuUtilMetricRequest.getNodeUUID();
+        NodeDTO srcNode = webClientToPRM.get()
+                .uri("/api/v1/nodes/" + srcNodeUUID)
+                .retrieve()
+                .bodyToMono(NodeDTO.class)
+                .onErrorResume(error -> {
+                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
+                })
+                .block();
+
+        // TODO: Build request
+        CreateNewResourceUtilizationDTO createNewResourceUtilizationDTO = CreateNewResourceUtilizationDTO.builder()
+                .type(cpuUtilMetricRequest.getType())
+                .recurrence(Integer.parseInt(cpuUtilMetricRequest.getRecurrence()))
+                .enabled(cpuUtilMetricRequest.isEnabled())
+                .build();
+
+        WebClient webclientToPNA = WebClient.create("http://" + srcNode.getHostname() + ":7676");
+        ShortNodeMetricResponseDTO shortNodeMetricResponseDTO = webclientToPNA.post()
+                .uri("/api/v1/nodes/localNode/metric-requests")
+                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                .bodyValue(createNewResourceUtilizationDTO)
+                .retrieve()
+                .bodyToMono(ShortNodeMetricResponseDTO.class)
+                .onErrorResume(error -> {
+                    throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                })
+                .block();
+
+        MetricRequest metricRequest = MetricRequest.fromShortNodeMetricResponseDTO(shortNodeMetricResponseDTO);
+
+        // TODO: set link UUID to achieve an appropriate mapping in cloud
+        metricRequest.setLinkUUID(srcNodeUUID); // global uuid
+//        // TODO: do conversion to DTO and persist then in database
+        MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
+        // then send the request to the correct pna
+        this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+        return savedMetricRequest;
     }
 
     // TODO: on startup inform InfluxDBService about all existing metric requests that are in DB

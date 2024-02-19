@@ -1,0 +1,7 @@
+{
+  "remoteMetricRequestUUID": "3185584c-75d6-4840-aad6-72ede5888b2f",
+  "remoteNodeUUID": "0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3",
+  "type": "cpu-util",
+  "recurrence": "15",
+  "enabled": true
+}

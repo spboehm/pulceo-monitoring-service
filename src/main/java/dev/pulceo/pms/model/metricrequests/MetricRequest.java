@@ -1,11 +1,14 @@
 package dev.pulceo.pms.model.metricrequests;
 
+import dev.pulceo.pms.dto.metricrequests.pna.ShortNodeMetricResponseDTO;
 import dev.pulceo.pms.model.BaseEntity;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.geo.Metric;
 
 import java.util.UUID;
 
@@ -14,6 +17,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
+@ToString
 // TODO change to network metric request
 public class MetricRequest extends BaseEntity {
     // TODO: change with job id
@@ -25,4 +29,16 @@ public class MetricRequest extends BaseEntity {
     private String recurrence;
     // TODO: add transformer
     private boolean enabled;
+
+    public static MetricRequest fromShortNodeMetricResponseDTO(ShortNodeMetricResponseDTO shortNodeMetricResponseDTO) {
+        return MetricRequest.builder()
+                .remoteMetricRequestUUID(shortNodeMetricResponseDTO.getRemoteMetricRequestUUID())
+                .linkUUID(shortNodeMetricResponseDTO.getRemoteNodeUUID())
+                .remoteLinkUUID(shortNodeMetricResponseDTO.getRemoteNodeUUID())
+                .type(shortNodeMetricResponseDTO.getType())
+                .recurrence(shortNodeMetricResponseDTO.getRecurrence())
+                .enabled(shortNodeMetricResponseDTO.isEnabled())
+                .build();
+    }
+
 }

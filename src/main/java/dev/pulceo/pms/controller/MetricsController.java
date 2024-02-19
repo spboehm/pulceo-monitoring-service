@@ -3,6 +3,7 @@ package dev.pulceo.pms.controller;
 import dev.pulceo.pms.dto.metricrequests.*;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
+import dev.pulceo.pms.model.metricrequests.CPUUtilMetricRequest;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
 import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
@@ -40,7 +41,11 @@ public class MetricsController {
     @PostMapping("/api/v1/metric-requests")
     public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(@RequestBody CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
         // TODO: check type of metric request
-        if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.ICMP_RTT) {
+        if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.CPU_UTIL) {
+            CreateNewMetricRequestCPUUtilDTO createNewMetricRequestCPUUtilDTO = CreateNewMetricRequestCPUUtilDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
+            MetricRequest metricRequest = this.metricsService.createNewCpuUtilMetricRequest(CPUUtilMetricRequest.fromCreateNewMetricRequestCPUUtilDTO(createNewMetricRequestCPUUtilDTO));
+            return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
+        } else if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.ICMP_RTT) {
             CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
             MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(IcmpRttMetricRequest.fromCreateNewMetricRequestIcmpRttDTO(createNewMetricRequestIcmpRttDTO));
             return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));

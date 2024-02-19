@@ -122,13 +122,30 @@ public class InfluxDBService {
                             for (FluxTable table : cpuUtilTables) {
                                 List<FluxRecord> records = table.getRecords();
                                 for (FluxRecord record : records) {
-                                    NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "ms");
+                                    NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "%");
                                     simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
                                     // store for archiving purposes and fast access
                                     this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
                                 }
                             }
                             break;
+                        case "mem-util":
+                            // TODO: implement here
+                            String queryStringForMemUtil = InfluxQueryBuilder.queryLastRawRecord(bucket, "CPU_UTIL", "usageCPUPercentage", metricRequest.getRemoteMetricRequestUUID().toString());
+                            QueryApi queryApiForMEMUtil = influxDBClient.getQueryApi();
+                            List<FluxTable> memUtilTables = queryApiForMEMUtil.query(queryStringForMemUtil);
+                            for (FluxTable table : memUtilTables) {
+                                List<FluxRecord> records = table.getRecords();
+                                for (FluxRecord record : records) {
+                                    NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "%");
+                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
+                                    // store for archiving purposes and fast access
+                                    this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
+                                }
+                            }
+                            break;
+                        // TODO: Disk Util
+                        // TODO: Mem Util
                         case "icmp-rtt":
                             String queryString = InfluxQueryBuilder.queryLastRawRecord(bucket, "ICMP_RTT", "rttAvg", metricRequest.getRemoteMetricRequestUUID().toString());
                             QueryApi queryApi = influxDBClient.getQueryApi();

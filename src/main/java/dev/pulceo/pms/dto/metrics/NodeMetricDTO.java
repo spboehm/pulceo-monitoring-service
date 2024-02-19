@@ -35,7 +35,7 @@ public class NodeMetricDTO extends BaseEntity {
                 .metricType(record.getValueByKey("metricType").toString())
                 .metricRequestUUID(metricRequest.getUuid().toString())
                 .nodeUUID(metricRequest.getLinkUUID().toString())
-                .time(record.getValueByKey("time").toString())
+                .time(record.getValueByKey("timestamp").toString())
                 .val(Double.valueOf(record.getValueByKey("_value").toString()))
                 .unit(unit)
                 .build();

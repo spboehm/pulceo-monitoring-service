@@ -3,7 +3,7 @@ package dev.pulceo.pms.service;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
-import dev.pulceo.pms.model.metricrequests.CPUUtilMetricRequest;
+import dev.pulceo.pms.model.metricrequests.ResourceUtilizationMetricRequest;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
 import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
@@ -15,8 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.WireMockSpring;
-import org.springframework.data.geo.Metric;
-import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.Arrays;
 import java.util.List;
@@ -193,7 +191,7 @@ public class MetricsServiceIntegrationTests {
     public void testCreateNewCpuUtilMetricRequest() {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
-        CPUUtilMetricRequest cpuUtilMetricRequest = CPUUtilMetricRequest.builder()
+        ResourceUtilizationMetricRequest resourceUtilizationMetricRequest = ResourceUtilizationMetricRequest.builder()
                 .nodeUUID(srcNodeUUID)
                 .type("cpu-util")
                 .recurrence("15")
@@ -223,13 +221,13 @@ public class MetricsServiceIntegrationTests {
                         .withBodyFile("metricrequests/create-new-cpu-util-request-response.json")));
 
         // when
-        MetricRequest metricRequest = this.metricsService.createNewCpuUtilMetricRequest(cpuUtilMetricRequest);
+        MetricRequest metricRequest = this.metricsService.createNewResourceUtilizationRequest(resourceUtilizationMetricRequest);
 
         // then
-        assertEquals(cpuUtilMetricRequest.getNodeUUID(), metricRequest.getRemoteLinkUUID());
-        assertEquals(cpuUtilMetricRequest.getType(), metricRequest.getType());
-        assertEquals(cpuUtilMetricRequest.getRecurrence(), metricRequest.getRecurrence());
-        assertEquals(cpuUtilMetricRequest.isEnabled(), metricRequest.isEnabled());
+        assertEquals(resourceUtilizationMetricRequest.getNodeUUID(), metricRequest.getRemoteLinkUUID());
+        assertEquals(resourceUtilizationMetricRequest.getType(), metricRequest.getType());
+        assertEquals(resourceUtilizationMetricRequest.getRecurrence(), metricRequest.getRecurrence());
+        assertEquals(resourceUtilizationMetricRequest.isEnabled(), metricRequest.isEnabled());
 
     }
 

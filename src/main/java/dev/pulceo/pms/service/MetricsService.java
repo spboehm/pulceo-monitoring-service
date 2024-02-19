@@ -1,7 +1,6 @@
 package dev.pulceo.pms.service;
 
 import dev.pulceo.pms.dto.link.NodeLinkDTO;
-import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestCPUUtilDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestIcmpRttDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestTcpBwDTO;
 import dev.pulceo.pms.dto.metricrequests.pna.CreateNewResourceUtilizationDTO;
@@ -9,7 +8,7 @@ import dev.pulceo.pms.dto.metricrequests.pna.ShortNodeMetricResponseDTO;
 import dev.pulceo.pms.dto.node.NodeDTO;
 import dev.pulceo.pms.exception.MetricsServiceException;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
-import dev.pulceo.pms.model.metricrequests.CPUUtilMetricRequest;
+import dev.pulceo.pms.model.metricrequests.ResourceUtilizationMetricRequest;
 import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
 import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
@@ -18,13 +17,11 @@ import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.integration.json.JsonPathUtils;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -218,11 +215,11 @@ public class MetricsService {
         return resultList;
     }
 
-    public MetricRequest createNewCpuUtilMetricRequest(CPUUtilMetricRequest cpuUtilMetricRequest) {
+    public MetricRequest createNewResourceUtilizationRequest(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) {
         WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
 
         // first obtain the hostname
-        UUID srcNodeUUID = cpuUtilMetricRequest.getNodeUUID();
+        UUID srcNodeUUID = resourceUtilizationMetricRequest.getNodeUUID();
         NodeDTO srcNode = webClientToPRM.get()
                 .uri("/api/v1/nodes/" + srcNodeUUID)
                 .retrieve()
@@ -234,9 +231,9 @@ public class MetricsService {
 
         // TODO: Build request
         CreateNewResourceUtilizationDTO createNewResourceUtilizationDTO = CreateNewResourceUtilizationDTO.builder()
-                .type(cpuUtilMetricRequest.getType())
-                .recurrence(Integer.parseInt(cpuUtilMetricRequest.getRecurrence()))
-                .enabled(cpuUtilMetricRequest.isEnabled())
+                .type(resourceUtilizationMetricRequest.getType())
+                .recurrence(Integer.parseInt(resourceUtilizationMetricRequest.getRecurrence()))
+                .enabled(resourceUtilizationMetricRequest.isEnabled())
                 .build();
 
         WebClient webclientToPNA = WebClient.create("http://" + srcNode.getHostname() + ":7676");
@@ -252,7 +249,6 @@ public class MetricsService {
                 .block();
 
         MetricRequest metricRequest = MetricRequest.fromShortNodeMetricResponseDTO(shortNodeMetricResponseDTO);
-
         // TODO: set link UUID to achieve an appropriate mapping in cloud
         metricRequest.setLinkUUID(srcNodeUUID); // global uuid
 //        // TODO: do conversion to DTO and persist then in database

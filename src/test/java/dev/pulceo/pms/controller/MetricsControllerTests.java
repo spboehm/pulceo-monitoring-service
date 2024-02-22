@@ -64,7 +64,7 @@ public class MetricsControllerTests {
     static void clean() {
         MetricsServiceIntegrationTests.wireMockServerForPRM.shutdown();
         MetricsServiceIntegrationTests.wireMockServerForPNA.shutdown();
-        MetricsServiceIntegrationTests.wireMockServerForPNA.resetAll();
+        MetricsServiceIntegrationTests.wireMockServerForPNA.shutdown();
     }
 
     @Test

@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pms-influxdb-lb
+
+spec:
+  ports:
+    - protocol: TCP
+      name: web
+      port: 8089
+      targetPort: 8086
+  selector:
+    app: pms-influxdb
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pms-influxdb
+
+spec:
+  ports:
+    - protocol: TCP
+      name: web
+      port: 8086
+  selector:
+    app: pms-influxdb
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pms-influxdb
+  labels:
+    app: pms-influxdb
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pms-influxdb
+  template:
+    metadata:
+      labels:
+        app: pms-influxdb
+    spec:
+      containers:
+        - name: pms-influxdb
+          image: influxdb:2.7.5
+          env:
+            - name: DOCKER_INFLUXDB_INIT_MODE
+              value: setup
+            - name: DOCKER_INFLUXDB_INIT_ORG
+              value: org
+            - name: DOCKER_INFLUXDB_INIT_BUCKET
+              value: bucket
+            - name: DOCKER_INFLUXDB_INIT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: pms-credentials
+                  key: DOCKER_INFLUXDB_INIT_USERNAME
+            - name: DOCKER_INFLUXDB_INIT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pms-credentials
+                  key: DOCKER_INFLUXDB_INIT_PASSWORD
+            - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: pms-credentials
+                  key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+          volumeMounts:
+            - name: pms-influxdb-pv-data
+              mountPath: /var/lib/influxdb2
+            - name: pms-influxdb-pv-config
+              mountPath: /etc/influxdb2
+          ports:
+            - containerPort: 8086
+              name: web
+      volumes:
+        - name: pms-influxdb-pv-data
+          hostPath:
+            path: /pms/pms-influxdb-pv-data
+            type: Directory
+        - name: pms-influxdb-pv-config
+          hostPath:
+            path: /pms/pms-influxdb-pv-config
+            type: Directory

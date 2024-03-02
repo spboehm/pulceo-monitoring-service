@@ -1,0 +1,118 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pulceo-monitoring-service
+
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /api/v1/metric-requests
+            pathType: Prefix
+            backend:
+              service:
+                name:  pulceo-monitoring-service
+                port:
+                  number: 7777
+          - path: /register
+            pathType: Prefix
+            backend:
+              service:
+                name: pulceo-monitoring-service
+                port:
+                  number: 7777
+          - path: /api/v1/node-link-metrics
+            pathType: Prefix
+            backend:
+              service:
+                name: pulceo-monitoring-service
+                port:
+                  number: 7777
+          - path: /pms/health
+            pathType: Exact
+            backend:
+              service:
+                name: pulceo-monitoring-service
+                port:
+                  number: 7777
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pulceo-monitoring-service
+
+spec:
+  ports:
+    - protocol: TCP
+      name: web
+      port: 7777
+  selector:
+    app: pulceo-monitoring-service
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pulceo-monitoring-service
+  labels:
+    app: pulceo-monitoring-service
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pulceo-monitoring-service
+  template:
+    metadata:
+      labels:
+        app: pulceo-monitoring-service
+    spec:
+      containers:
+        - name: pulceo-monitoring-service
+          image: ghcr.io/spboehm/pulceo-monitoring-service:implement-monitoring-service
+          imagePullPolicy: Always
+          env:
+            - name: PRM_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pms-configmap
+                  key: PRM_HOST
+            - name: INFLUXDB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: pms-configmap
+                  key: INFLUXDB_URL
+            - name: INFLUXDB_ORG
+              valueFrom:
+                configMapKeyRef:
+                  name: pms-configmap
+                  key: INFLUXDB_ORG
+            - name: INFLUXDB_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: pms-configmap
+                  key: INFLUXDB_BUCKET
+            - name: INFLUXDB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: pms-credentials
+                  key: INFLUXDB_TOKEN
+            - name: PNA_MQTT_BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pms-credentials
+                  key: PNA_MQTT_BROKER_URL
+            - name: PNA_MQTT_CLIENT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: pms-credentials
+                  key: PNA_MQTT_CLIENT_USERNAME
+            - name: PNA_MQTT_CLIENT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pms-credentials
+                  key: PNA_MQTT_CLIENT_PASSWORD
+          ports:
+            - containerPort: 7777
+              name: web

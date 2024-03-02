@@ -31,6 +31,8 @@ public class MetricsController {
         this.metricsService = metricsService;
     }
 
+
+
     @MessageMapping("/register")
     @SendTo("/metrics")
     public String greeting(Object message) throws Exception {

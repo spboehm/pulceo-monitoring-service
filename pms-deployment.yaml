@@ -70,7 +70,7 @@ spec:
     spec:
       containers:
         - name: pulceo-monitoring-service
-          image: ghcr.io/spboehm/pulceo-monitoring-service:implement-monitoring-service
+          image: ghcr.io/spboehm/pulceo-monitoring-service:main
           imagePullPolicy: Always
           env:
             - name: PRM_HOST

@@ -38,6 +38,9 @@ public class MetricsService {
     @Value("${prm.endpoint}")
     private String prmEndpoint;
 
+    @Value("${webclient.scheme}")
+    private String webClientScheme;
+
     @Autowired
     public MetricsService(MetricRequestRepository metricRequestRepository, SimpMessagingTemplate simpMessagingTemplate, InfluxDBService influxDBService, NodeLinkMetricRepository nodeLinkMetricRepository) {
         this.metricRequestRepository = metricRequestRepository;
@@ -86,7 +89,7 @@ public class MetricsService {
                 .enabled(icmpRttMetricRequest.isEnabled())
                 .build();
 
-        webClient = WebClient.create("http://" + srcNode.getHostname() + ":7676");
+        webClient = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
         // TODO: proper DTO conversion
         MetricRequest metricRequest = webClient.post()
                 .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/icmp-rtt-requests")
@@ -145,7 +148,7 @@ public class MetricsService {
                 .block();
 
         // create new iperf-server using iperf3 server controller
-        WebClient webClientToDestNode = WebClient.create("http://" + destNode.getHostname() + ":7676");
+        WebClient webClientToDestNode = WebClient.create(this.webClientScheme + "://" + destNode.getHostname() + ":7676");
                 String portOfRemoteIperfServer = webClientToDestNode.post()
                 .uri("/api/v1/iperf3-servers")
                 .header("Authorization", "Basic " + getPnaTokenByNodeUUID(destNodeUUID))
@@ -165,7 +168,7 @@ public class MetricsService {
                 .enabled(tcpBwMetricRequest.isEnabled())
                 .build();
 
-        WebClient webclientToPNA = WebClient.create("http://" + srcNode.getHostname() + ":7676");
+        WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
         MetricRequest metricRequest = webclientToPNA.post()
                 .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-bw-requests")
                 .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
@@ -236,7 +239,7 @@ public class MetricsService {
                 .enabled(resourceUtilizationMetricRequest.isEnabled())
                 .build();
 
-        WebClient webclientToPNA = WebClient.create("http://" + srcNode.getHostname() + ":7676");
+        WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
         ShortNodeMetricResponseDTO shortNodeMetricResponseDTO = webclientToPNA.post()
                 .uri("/api/v1/nodes/localNode/metric-requests")
                 .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))

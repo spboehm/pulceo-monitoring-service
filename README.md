@@ -48,7 +48,6 @@ kubectl --kubeconfig=/home/$USER/.kube/config create secret generic pms-credenti
   --from-literal=PNA_MQTT_CLIENT_PASSWORD=${PNA_MQTT_CLIENT_PASSWORD}
 ```
 ```bash
-kubectl apply -f pms-influxdb.yaml
 kubectl apply -f pms-deployment.yaml
 ```
 

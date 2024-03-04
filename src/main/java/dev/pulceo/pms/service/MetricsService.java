@@ -3,6 +3,7 @@ package dev.pulceo.pms.service;
 import dev.pulceo.pms.dto.link.NodeLinkDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestIcmpRttDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestTcpBwDTO;
+import dev.pulceo.pms.dto.metricrequests.pna.CreateNewMetricRequestIcmpRttOnPNADTO;
 import dev.pulceo.pms.dto.metricrequests.pna.CreateNewResourceUtilizationDTO;
 import dev.pulceo.pms.dto.metricrequests.pna.ShortNodeMetricResponseDTO;
 import dev.pulceo.pms.dto.node.NodeDTO;
@@ -59,11 +60,11 @@ public class MetricsService {
         // TODO: check if link does already exist
         WebClient webClient = WebClient.create(this.prmEndpoint);
         NodeLinkDTO nodeLinkDTO = webClient.get()
-                .uri("/api/v1/links/" + icmpRttMetricRequest.getLinkUUID()) // on cloud
+                .uri("/api/v1/links/" + icmpRttMetricRequest.getLinkId()) // on cloud
                 .retrieve()
                 .bodyToMono(NodeLinkDTO.class)
                 .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(icmpRttMetricRequest.getLinkUUID())));
+                    throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(icmpRttMetricRequest.getLinkId())));
                 })
                 .block();
 
@@ -82,7 +83,7 @@ public class MetricsService {
                 .block();
 
         // then send the request to the correct pna
-        CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttDTO.builder()
+        CreateNewMetricRequestIcmpRttOnPNADTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttOnPNADTO.builder()
                 .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
                 .type(icmpRttMetricRequest.getType())
                 .recurrence(icmpRttMetricRequest.getRecurrence())
@@ -102,7 +103,7 @@ public class MetricsService {
                 })
                 .block();
         // TODO: set link UUID to achieve an appropriate mapping
-        metricRequest.setLinkUUID(icmpRttMetricRequest.getLinkUUID());
+        metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global UUID
         MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
         // TODO: do conversion to DTO and persist then in database
         this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);

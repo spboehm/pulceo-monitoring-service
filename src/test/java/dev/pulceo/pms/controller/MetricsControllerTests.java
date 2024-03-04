@@ -111,7 +111,7 @@ public class MetricsControllerTests {
 
         CreateNewAbstractMetricRequestDTO createNewMetricRequestDTO = CreateNewMetricRequestIcmpRttDTO.builder()
                 .metricRequestDTOType(MetricRequestDTOType.ICMP_RTT)
-                .linkUUID(linkUUID)
+                .linkId(linkUUID.toString())
                 .type("icmp-rtt")
                 .recurrence("15")
                 .build();

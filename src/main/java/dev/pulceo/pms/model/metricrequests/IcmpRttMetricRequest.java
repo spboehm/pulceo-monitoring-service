@@ -16,14 +16,14 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 public class IcmpRttMetricRequest extends AbstractMetricRequest {
-    private UUID linkUUID; // remote link UUID
+    private String linkId; // remote link UUID
     private String type;
     private String recurrence;
     private boolean enabled;
 
     public static IcmpRttMetricRequest fromCreateNewMetricRequestIcmpRttDTO(CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO) {
         return IcmpRttMetricRequest.builder()
-                .linkUUID(createNewMetricRequestIcmpRttDTO.getLinkUUID())
+                .linkId(createNewMetricRequestIcmpRttDTO.getLinkId())
                 .type(createNewMetricRequestIcmpRttDTO.getType())
                 .recurrence(createNewMetricRequestIcmpRttDTO.getRecurrence())
                 .enabled(createNewMetricRequestIcmpRttDTO.isEnabled())
@@ -38,14 +38,14 @@ public class IcmpRttMetricRequest extends AbstractMetricRequest {
         IcmpRttMetricRequest that = (IcmpRttMetricRequest) o;
 
         if (enabled != that.enabled) return false;
-        if (!Objects.equals(linkUUID, that.linkUUID)) return false;
+        if (!Objects.equals(linkId, that.linkId)) return false;
         if (!Objects.equals(type, that.type)) return false;
         return Objects.equals(recurrence, that.recurrence);
     }
 
     @Override
     public int hashCode() {
-        int result = linkUUID != null ? linkUUID.hashCode() : 0;
+        int result = linkId != null ? linkId.hashCode() : 0;
         result = 31 * result + (type != null ? type.hashCode() : 0);
         result = 31 * result + (recurrence != null ? recurrence.hashCode() : 0);
         result = 31 * result + (enabled ? 1 : 0);

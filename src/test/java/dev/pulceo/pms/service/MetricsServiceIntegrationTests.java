@@ -65,7 +65,7 @@ public class MetricsServiceIntegrationTests {
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
         IcmpRttMetricRequest icmpRttMetricRequest = IcmpRttMetricRequest.builder()
-                .linkUUID(linkUUID)
+                .linkId(String.valueOf(linkUUID))
                 .type("icmp-rtt")
                 .recurrence("15")
                 .enabled(true)
@@ -110,7 +110,7 @@ public class MetricsServiceIntegrationTests {
 
         // then
         // TODO: further evaluations
-        assertEquals(icmpRttMetricRequest.getLinkUUID(), metricRequest.getRemoteLinkUUID());
+        assertEquals(icmpRttMetricRequest.getLinkId(), metricRequest.getRemoteLinkUUID().toString());
         assertEquals(icmpRttMetricRequest.getType(), metricRequest.getType());
         assertEquals(icmpRttMetricRequest.getRecurrence(), metricRequest.getRecurrence());
         assertEquals(icmpRttMetricRequest.isEnabled(), metricRequest.isEnabled());

@@ -10,7 +10,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class CreateNewMetricRequestIcmpRttDTO extends CreateNewAbstractMetricRequestDTO {
-    private UUID linkUUID;
+    private String linkId;
     private String type;
     private String recurrence;
     private boolean enabled;
@@ -26,7 +26,7 @@ public class CreateNewMetricRequestIcmpRttDTO extends CreateNewAbstractMetricReq
     public static CreateNewMetricRequestIcmpRttDTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
         CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = (CreateNewMetricRequestIcmpRttDTO) createNewAbstractMetricRequestDTO;
         return CreateNewMetricRequestIcmpRttDTO.builder()
-                .linkUUID(createNewMetricRequestIcmpRttDTO.getLinkUUID())
+                .linkId(createNewMetricRequestIcmpRttDTO.getLinkId())
                 .type(createNewMetricRequestIcmpRttDTO.getType())
                 .recurrence(createNewMetricRequestIcmpRttDTO.getRecurrence())
                 .enabled(createNewMetricRequestIcmpRttDTO.isEnabled())

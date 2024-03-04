@@ -4,6 +4,7 @@ import dev.pulceo.pms.dto.link.NodeLinkDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestIcmpRttDTO;
 import dev.pulceo.pms.dto.metricrequests.CreateNewMetricRequestTcpBwDTO;
 import dev.pulceo.pms.dto.metricrequests.pna.CreateNewMetricRequestIcmpRttOnPNADTO;
+import dev.pulceo.pms.dto.metricrequests.pna.CreateNewMetricRequestTcpBwOnPNADTO;
 import dev.pulceo.pms.dto.metricrequests.pna.CreateNewResourceUtilizationDTO;
 import dev.pulceo.pms.dto.metricrequests.pna.ShortNodeMetricResponseDTO;
 import dev.pulceo.pms.dto.node.NodeDTO;
@@ -115,11 +116,11 @@ public class MetricsService {
         // TODO: check if link does already exist
         WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
         NodeLinkDTO nodeLinkDTO = webClientToPRM.get()
-                .uri("/api/v1/links/" + tcpBwMetricRequest.getLinkUUID()) // on cloud
+                .uri("/api/v1/links/" + tcpBwMetricRequest.getLinkId()) // on cloud
                 .retrieve()
                 .bodyToMono(NodeLinkDTO.class)
                 .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(tcpBwMetricRequest.getLinkUUID())));
+                    throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(tcpBwMetricRequest.getLinkId())));
                 })
                 .block();
         // Instruct pna to create a new ICMP RTT metric request
@@ -161,7 +162,7 @@ public class MetricsService {
                 .block();
 
         // inform src Node about the new iperf server
-        CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwDTO.builder()
+        CreateNewMetricRequestTcpBwOnPNADTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwOnPNADTO.builder()
                 .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
                 .port(Long.valueOf(portOfRemoteIperfServer))
                 .type(tcpBwMetricRequest.getType())
@@ -181,7 +182,7 @@ public class MetricsService {
                 })
                 .block();
         // TODO: set link UUID to achieve an appropriate mapping in cloud
-        metricRequest.setLinkUUID(tcpBwMetricRequest.getLinkUUID());
+        metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global uuid
         // TODO: do conversion to DTO and persist then in database
         MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
         // then send the request to the correct pna

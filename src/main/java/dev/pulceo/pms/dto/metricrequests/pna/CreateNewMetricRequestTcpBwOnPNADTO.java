@@ -1,5 +1,6 @@
-package dev.pulceo.pms.dto.metricrequests;
+package dev.pulceo.pms.dto.metricrequests.pna;
 
+import dev.pulceo.pms.dto.metricrequests.CreateNewAbstractMetricRequestDTO;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -12,8 +13,8 @@ import java.util.UUID;
 @SuperBuilder
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class CreateNewMetricRequestTcpBwDTO extends CreateNewAbstractMetricRequestDTO {
-    private String linkId;
+public class CreateNewMetricRequestTcpBwOnPNADTO extends CreateNewAbstractMetricRequestDTO {
+    private UUID linkUUID;
     private String recurrence;
     private boolean enabled;
     // ignored by svc
@@ -24,10 +25,10 @@ public class CreateNewMetricRequestTcpBwDTO extends CreateNewAbstractMetricReque
     @Builder.Default
     private int time = 10;
 
-    public static CreateNewMetricRequestTcpBwDTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
-        CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = (CreateNewMetricRequestTcpBwDTO) createNewAbstractMetricRequestDTO;
-        return CreateNewMetricRequestTcpBwDTO.builder()
-                .linkId(createNewMetricRequestTcpBwDTO.getLinkId())
+    public static CreateNewMetricRequestTcpBwOnPNADTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
+        CreateNewMetricRequestTcpBwOnPNADTO createNewMetricRequestTcpBwDTO = (CreateNewMetricRequestTcpBwOnPNADTO) createNewAbstractMetricRequestDTO;
+        return CreateNewMetricRequestTcpBwOnPNADTO.builder()
+                .linkUUID(createNewMetricRequestTcpBwDTO.getLinkUUID())
                 .type(createNewMetricRequestTcpBwDTO.getType())
                 .recurrence(createNewMetricRequestTcpBwDTO.getRecurrence())
                 .enabled(createNewMetricRequestTcpBwDTO.isEnabled())

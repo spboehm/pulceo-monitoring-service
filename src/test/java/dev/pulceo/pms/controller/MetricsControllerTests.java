@@ -178,7 +178,7 @@ public class MetricsControllerTests {
                         .withBody("")));
 
         CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwDTO.builder()
-                .linkUUID(linkUUID)
+                .linkId(String.valueOf(linkUUID))
                 .type("tcp-bw")
                 .recurrence("15")
                 .enabled(true)

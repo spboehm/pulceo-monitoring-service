@@ -124,7 +124,7 @@ public class MetricsServiceIntegrationTests {
         UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
         TcpBwMetricRequest tcpBwMetricRequest = TcpBwMetricRequest.builder()
                 .port(5000)
-                .linkUUID(linkUUID)
+                .linkId(String.valueOf(linkUUID))
                 .type("tcp-bw")
                 .recurrence("15")
                 .enabled(true)
@@ -181,7 +181,7 @@ public class MetricsServiceIntegrationTests {
 
         // then
         // TODO: further evaluations
-        assertEquals(tcpBwMetricRequest.getLinkUUID(), metricRequest.getRemoteLinkUUID());
+        assertEquals(tcpBwMetricRequest.getLinkId(), metricRequest.getRemoteLinkUUID().toString());
         assertEquals(tcpBwMetricRequest.getType(), metricRequest.getType());
         assertEquals(tcpBwMetricRequest.getRecurrence(), metricRequest.getRecurrence());
         assertEquals(tcpBwMetricRequest.isEnabled(), metricRequest.isEnabled());

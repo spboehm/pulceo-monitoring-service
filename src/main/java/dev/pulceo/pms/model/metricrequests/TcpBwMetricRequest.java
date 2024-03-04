@@ -16,7 +16,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 public class TcpBwMetricRequest extends AbstractMetricRequest {
-    private UUID linkUUID; // remote link UUID
+    private String linkId; // remote link UUID
     private String type;
     private String recurrence;
     private boolean enabled;
@@ -28,7 +28,7 @@ public class TcpBwMetricRequest extends AbstractMetricRequest {
 
     public static TcpBwMetricRequest fromCreateNewMetricRequestTcpBwDTO(CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO) {
         return TcpBwMetricRequest.builder()
-                .linkUUID(createNewMetricRequestTcpBwDTO.getLinkUUID())
+                .linkId(createNewMetricRequestTcpBwDTO.getLinkId())
                 .type(createNewMetricRequestTcpBwDTO.getType())
                 .recurrence(createNewMetricRequestTcpBwDTO.getRecurrence())
                 .enabled(createNewMetricRequestTcpBwDTO.isEnabled())

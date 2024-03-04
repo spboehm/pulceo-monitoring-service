@@ -11,18 +11,18 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @JsonTypeInfo(
         include = JsonTypeInfo.As.EXISTING_PROPERTY,
-        property = "metricRequestDTOType",
+        property = "type",
         use = JsonTypeInfo.Id.NAME,
         visible = true
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = CreateNewMetricRequestIcmpRttDTO.class, name = "ICMP_RTT"),
-        @JsonSubTypes.Type(value = CreateNewMetricRequestTcpBwDTO.class, name = "TCP_BW"),
-        @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "CPU_UTIL"),
-        @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "MEM_UTIL"),
-        @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "STORAGE_UTIL"),
-        @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "NET_UTIL")
+        @JsonSubTypes.Type(value = CreateNewMetricRequestIcmpRttDTO.class, name = "icmp-rtt"),
+        @JsonSubTypes.Type(value = CreateNewMetricRequestTcpBwDTO.class, name = "tcp-bw"),
+        @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "cpu-util"),
+        @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "mem-util"),
+        @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "storage-util"),
+        @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "net-util")
 })
 public abstract class CreateNewAbstractMetricRequestDTO {
-    private MetricRequestDTOType metricRequestDTOType;
+    private String type;
 }

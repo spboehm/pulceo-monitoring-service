@@ -14,7 +14,6 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 public class CreateNewMetricRequestTcpBwDTO extends CreateNewAbstractMetricRequestDTO {
     private UUID linkUUID;
-    private String type;
     private String recurrence;
     private boolean enabled;
     // ignored by svc

@@ -1,6 +1,7 @@
 package dev.pulceo.pms.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -8,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping()
 public class HealthController {
 
-        @RequestMapping(value = {"/health", "/healthz", "/pms/health"})
+        @GetMapping(value = {"/health", "/healthz", "/pms/health"})
         public ResponseEntity<String> health() {
             return ResponseEntity.status(200).body("OK");
         }

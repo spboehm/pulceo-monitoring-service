@@ -11,17 +11,13 @@ import dev.pulceo.pms.service.MetricsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.*;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Controller
+@RestController
 public class MetricsController {
 
     private final MetricsService metricsService;
@@ -42,18 +38,16 @@ public class MetricsController {
     @PostMapping("/api/v1/metric-requests")
     public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(@RequestBody CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
         // TODO: check type of metric request
-        if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.CPU_UTIL ||
-            createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.MEM_UTIL ||
-                createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.NET_UTIL ||
-                createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.STORAGE_UTIL) {
+        if (createNewAbstractMetricRequestDTO.getType().equals("cpu-util") || createNewAbstractMetricRequestDTO.getType().equals("mem-util") ||
+                createNewAbstractMetricRequestDTO.getType().equals("storage-util") || createNewAbstractMetricRequestDTO.getType().equals("net-util")) {
             CreateNewMetricRequestResourceUtilizationDTO createNewMetricRequestResourceUtilizationDTO = CreateNewMetricRequestResourceUtilizationDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
             MetricRequest metricRequest = this.metricsService.createNewResourceUtilizationRequest(ResourceUtilizationMetricRequest.fromCreateNewMetricRequestResourceUtilizationDTO(createNewMetricRequestResourceUtilizationDTO));
             return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
-        } else if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.ICMP_RTT) {
+        } else if (createNewAbstractMetricRequestDTO.getType().equals("icmp-rtt")) {
             CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
             MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(IcmpRttMetricRequest.fromCreateNewMetricRequestIcmpRttDTO(createNewMetricRequestIcmpRttDTO));
             return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
-        } else if (createNewAbstractMetricRequestDTO.getMetricRequestDTOType() == MetricRequestDTOType.TCP_BW) {
+        } else if (createNewAbstractMetricRequestDTO.getType().equals("tcp-bw")) {
             CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
             MetricRequest metricRequest = this.metricsService.createNewTcpBwMetricRequest(TcpBwMetricRequest.fromCreateNewMetricRequestTcpBwDTO(createNewMetricRequestTcpBwDTO));
             return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));

@@ -11,9 +11,9 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 public class CreateNewMetricRequestIcmpRttDTO extends CreateNewAbstractMetricRequestDTO {
     private String linkId;
-    private String type;
     private String recurrence;
-    private boolean enabled;
+    @Builder.Default
+    private boolean enabled = true;
     @Builder.Default
     private IPVersionDTO ipVersion = IPVersionDTO.IPv4;
     @Builder.Default

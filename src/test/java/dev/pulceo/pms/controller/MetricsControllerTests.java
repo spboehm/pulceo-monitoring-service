@@ -1,19 +1,14 @@
 package dev.pulceo.pms.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import dev.pulceo.pms.dto.metricrequests.*;
-import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
 import dev.pulceo.pms.repository.MetricRequestRepository;
 import dev.pulceo.pms.service.MetricsServiceIntegrationTests;
-import dev.pulceo.pms.util.SimulatedPulceoNodeAgent;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.contract.wiremock.WireMockSpring;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -22,7 +17,6 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.annotation.DirtiesContext.ClassMode.BEFORE_CLASS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -110,7 +104,6 @@ public class MetricsControllerTests {
 
 
         CreateNewAbstractMetricRequestDTO createNewMetricRequestDTO = CreateNewMetricRequestIcmpRttDTO.builder()
-                .metricRequestDTOType(MetricRequestDTOType.ICMP_RTT)
                 .linkId(linkUUID.toString())
                 .type("icmp-rtt")
                 .recurrence("15")
@@ -185,7 +178,6 @@ public class MetricsControllerTests {
                         .withBody("")));
 
         CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwDTO.builder()
-                .metricRequestDTOType(MetricRequestDTOType.TCP_BW)
                 .linkUUID(linkUUID)
                 .type("tcp-bw")
                 .recurrence("15")

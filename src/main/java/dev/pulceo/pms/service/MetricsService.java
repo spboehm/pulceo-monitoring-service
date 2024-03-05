@@ -168,19 +168,39 @@ public class MetricsService {
                 .type(tcpBwMetricRequest.getType())
                 .recurrence(tcpBwMetricRequest.getRecurrence())
                 .enabled(tcpBwMetricRequest.isEnabled())
+                .bitrate(tcpBwMetricRequest.getBitrate())
+                .time(tcpBwMetricRequest.getTime())
                 .build();
 
         WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
-        MetricRequest metricRequest = webclientToPNA.post()
-                .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-bw-requests")
-                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
-                .bodyValue(createNewMetricRequestTcpBwDTO)
-                .retrieve()
-                .bodyToMono(MetricRequest.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
-                })
-                .block();
+        // case udp or tcp because of different API links for the request on pna
+        MetricRequest metricRequest;
+        if (tcpBwMetricRequest.getType().equals("tcp-bw")) {
+            metricRequest = webclientToPNA.post()
+                    .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-bw-requests")
+                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                    .bodyValue(createNewMetricRequestTcpBwDTO)
+                    .retrieve()
+                    .bodyToMono(MetricRequest.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                    })
+                    .block();
+        } else if (tcpBwMetricRequest.getType().equals("udp-bw")) {
+            metricRequest = webclientToPNA.post()
+                    .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/udp-bw-requests")
+                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                    .bodyValue(createNewMetricRequestTcpBwDTO)
+                    .retrieve()
+                    .bodyToMono(MetricRequest.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                    })
+                    .block();
+        } else {
+            throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+        }
+
         // TODO: set link UUID to achieve an appropriate mapping in cloud
         metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global uuid
         // TODO: do conversion to DTO and persist then in database

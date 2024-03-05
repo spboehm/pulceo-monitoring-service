@@ -10,6 +10,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.geo.Metric;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity

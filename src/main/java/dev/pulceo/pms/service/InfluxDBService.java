@@ -189,6 +189,35 @@ public class InfluxDBService {
                                 }
                             }
                             break;
+                        case "tcp-rtt":
+                            String queryStringTcpRtt = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_RTT", "avgRTT", metricRequest.getRemoteMetricRequestUUID().toString());
+                            QueryApi queryApiTcpRtt = influxDBClient.getQueryApi();
+                            List<FluxTable> tablesTcpRTT = queryApiTcpRtt.query(queryStringTcpRtt);
+                            for (FluxTable table : tablesTcpRTT) {
+                                List<FluxRecord> records = table.getRecords();
+                                for (FluxRecord record : records) {
+                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
+                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                    // store for archiving purposes and fast access
+                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                }
+                            }
+                            // TODO: implement this
+                            break;
+                        case "udp-rtt":
+                            String queryStringUdpRtt = InfluxQueryBuilder.queryLastRawRecord(bucket, "UDP_RTT", "avgRTT", metricRequest.getRemoteMetricRequestUUID().toString());
+                            QueryApi queryApiUdpRtt = influxDBClient.getQueryApi();
+                            List<FluxTable> tablesUdpRTT = queryApiUdpRtt.query(queryStringUdpRtt);
+                            for (FluxTable table : tablesUdpRTT) {
+                                List<FluxRecord> records = table.getRecords();
+                                for (FluxRecord record : records) {
+                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
+                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                    // store for archiving purposes and fast access
+                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                }
+                            }
+                            break;
                         case "tcp-bw":
                             String queryStringTcpBw = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_BW", "bitrate", metricRequest.getRemoteMetricRequestUUID().toString());
                             QueryApi queryApiTcpBw = influxDBClient.getQueryApi();

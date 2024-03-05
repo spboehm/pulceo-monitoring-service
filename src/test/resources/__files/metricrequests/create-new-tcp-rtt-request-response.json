@@ -1,0 +1,7 @@
+{
+  "remoteMetricRequestUUID": "ec2ecdd3-b314-4338-b8d5-5be3b91ef06c",
+  "remoteLinkUUID": "ea9084cf-97bb-451e-8220-4bdda327839e",
+  "type": "tcp-rtt",
+  "recurrence": "15",
+  "enabled": true
+}

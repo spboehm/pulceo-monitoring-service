@@ -3,10 +3,7 @@ package dev.pulceo.pms.controller;
 import dev.pulceo.pms.dto.metricrequests.*;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
-import dev.pulceo.pms.model.metricrequests.ResourceUtilizationMetricRequest;
-import dev.pulceo.pms.model.metricrequests.IcmpRttMetricRequest;
-import dev.pulceo.pms.model.metricrequests.MetricRequest;
-import dev.pulceo.pms.model.metricrequests.TcpBwMetricRequest;
+import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.service.MetricsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -47,11 +44,11 @@ public class MetricsController {
             CreateNewMetricRequestIcmpRttDTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
             MetricRequest metricRequest = this.metricsService.createNewIcmpRttMetricRequest(IcmpRttMetricRequest.fromCreateNewMetricRequestIcmpRttDTO(createNewMetricRequestIcmpRttDTO));
             return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
-        } else if (createNewAbstractMetricRequestDTO.getType().equals("tcp-bw")) {
-            CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
-            MetricRequest metricRequest = this.metricsService.createNewTcpBwMetricRequest(TcpBwMetricRequest.fromCreateNewMetricRequestTcpBwDTO(createNewMetricRequestTcpBwDTO));
+        } else if (createNewAbstractMetricRequestDTO.getType().equals("udp-rtt") || createNewAbstractMetricRequestDTO.getType().equals("tcp-rtt")) {
+            CreateNewMetricRequestTcpUdpRttDTO createNewMetricRequestTcpUdpRttDTO = CreateNewMetricRequestTcpUdpRttDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
+            MetricRequest metricRequest = this.metricsService.createNewTcpUdpRttMetricRequest(TcpUdpRttMetricRequest.fromCreateNewMetricRequestTcpUdpRttDTO(createNewMetricRequestTcpUdpRttDTO));
             return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
-        } else if (createNewAbstractMetricRequestDTO.getType().equals("udp-bw")) {
+        } else if (createNewAbstractMetricRequestDTO.getType().equals("udp-bw") || createNewAbstractMetricRequestDTO.getType().equals("tcp-bw")) {
             CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwDTO.fromAbstractMetricRequestDTO(createNewAbstractMetricRequestDTO);
             MetricRequest metricRequest = this.metricsService.createNewTcpBwMetricRequest(TcpBwMetricRequest.fromCreateNewMetricRequestTcpBwDTO(createNewMetricRequestTcpBwDTO));
             return ResponseEntity.status(201).body(ShortMetricResponseDTO.fromMetricRequest(metricRequest));

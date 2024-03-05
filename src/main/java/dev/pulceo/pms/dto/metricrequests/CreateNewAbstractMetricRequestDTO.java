@@ -17,6 +17,8 @@ import lombok.experimental.SuperBuilder;
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = CreateNewMetricRequestIcmpRttDTO.class, name = "icmp-rtt"),
+        @JsonSubTypes.Type(value = CreateNewMetricRequestTcpUdpRttDTO.class, name = "tcp-rtt"),
+        @JsonSubTypes.Type(value = CreateNewMetricRequestTcpUdpRttDTO.class, name = "udp-rtt"),
         @JsonSubTypes.Type(value = CreateNewMetricRequestTcpBwDTO.class, name = "tcp-bw"),
         @JsonSubTypes.Type(value = CreateNewMetricRequestTcpBwDTO.class, name = "udp-bw"),
         @JsonSubTypes.Type(value = CreateNewMetricRequestResourceUtilizationDTO.class, name = "cpu-util"),

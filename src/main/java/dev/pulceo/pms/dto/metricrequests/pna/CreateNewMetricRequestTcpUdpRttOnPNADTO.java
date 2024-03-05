@@ -13,27 +13,23 @@ import java.util.UUID;
 @SuperBuilder
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class CreateNewMetricRequestTcpBwOnPNADTO extends CreateNewAbstractMetricRequestDTO {
+public class CreateNewMetricRequestTcpUdpRttOnPNADTO extends CreateNewAbstractMetricRequestDTO {
     private UUID linkUUID;
+    private String type;
     private String recurrence;
     private boolean enabled;
-    // ignored by svc
-    private long port;
+    // TODO: ipVersion
     @Builder.Default
-    private int bitrate = 0;
-    @Builder.Default
-    private int time = 10;
+    private int rounds = 10;
 
-    public static CreateNewMetricRequestTcpBwOnPNADTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
-        CreateNewMetricRequestTcpBwOnPNADTO createNewMetricRequestTcpBwDTO = (CreateNewMetricRequestTcpBwOnPNADTO) createNewAbstractMetricRequestDTO;
-        return CreateNewMetricRequestTcpBwOnPNADTO.builder()
+    public static CreateNewMetricRequestTcpUdpRttOnPNADTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
+        CreateNewMetricRequestTcpUdpRttOnPNADTO createNewMetricRequestTcpBwDTO = (CreateNewMetricRequestTcpUdpRttOnPNADTO) createNewAbstractMetricRequestDTO;
+        return CreateNewMetricRequestTcpUdpRttOnPNADTO.builder()
                 .linkUUID(createNewMetricRequestTcpBwDTO.getLinkUUID())
                 .type(createNewMetricRequestTcpBwDTO.getType())
                 .recurrence(createNewMetricRequestTcpBwDTO.getRecurrence())
                 .enabled(createNewMetricRequestTcpBwDTO.isEnabled())
-                .port(createNewMetricRequestTcpBwDTO.getPort())
-                .bitrate(createNewMetricRequestTcpBwDTO.getBitrate())
-                .time(createNewMetricRequestTcpBwDTO.getTime())
+                .rounds(createNewMetricRequestTcpBwDTO.getRounds())
                 .build();
     }
 

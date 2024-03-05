@@ -5,6 +5,7 @@ import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.service.MetricsService;
+import jakarta.websocket.server.PathParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.*;
@@ -23,8 +24,6 @@ public class MetricsController {
     public MetricsController(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
-
-
 
     @MessageMapping("/register")
     @SendTo("/metrics")
@@ -64,5 +63,10 @@ public class MetricsController {
             listOfNodeLinkMetricDTO.add(NodeLinkMetricDTO.fromNodeLinkMetric(metric));
         }
         return ResponseEntity.status(200).body(listOfNodeLinkMetricDTO);
+    }
+
+    @DeleteMapping("/api/v1/metric-requests/{metricRequestUUID}")
+    public void deleteMetricRequest(@PathVariable UUID metricRequestUUID) {
+        this.metricsService.deleteMetricRequest(metricRequestUUID);
     }
 }

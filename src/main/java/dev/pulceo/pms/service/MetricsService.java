@@ -348,6 +348,67 @@ public class MetricsService {
         return savedMetricRequest;
     }
 
+    public void deleteMetricRequest(UUID metricRequestUUID) {
+        // TODO: delete metric request on PNA
+        MetricRequest metricRequest = this.metricRequestRepository.findByUuid(metricRequestUUID);
+
+        if (metricRequest.getType().equals("icmp-rtt") || metricRequest.getType().equals("tcp-rtt") ||
+                metricRequest.getType().equals("udp-rtt") || metricRequest.getType().equals("tcp-bw") ||
+                metricRequest.getType().equals("udp-bw")) {
+            WebClient webClient = WebClient.create(this.prmEndpoint);
+            NodeLinkDTO nodeLinkDTO = webClient.get()
+                    .uri("/api/v1/links/" + metricRequest.getLinkUUID()) // on cloud
+                    .retrieve()
+                    .bodyToMono(NodeLinkDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(metricRequest.getLinkUUID())));
+                    })
+                    .block();
+
+            UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
+            NodeDTO srcNode = webClient.get()
+                    .uri("/api/v1/nodes/" + srcNodeUUID)
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
+                    })
+                    .block();
+
+            WebClient webClientToDestNode = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
+            webClientToDestNode.delete()
+                    .uri("/api/v1/links/" + metricRequest.getRemoteLinkUUID() + "/metric-requests/" + metricRequest.getRemoteMetricRequestUUID())
+                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNode.getUuid()))
+                    .retrieve()
+                    .bodyToMono(Void.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not delete metric request!"));
+                    })
+                    .block();
+        } else {
+            WebClient webClient = WebClient.create(this.prmEndpoint);
+            NodeDTO srcNode = webClient.get()
+                    .uri("/api/v1/nodes/" + metricRequest.getLinkUUID())
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(metricRequest.getLinkUUID())));
+                    })
+                    .block();
+
+            WebClient webClientToPna = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
+            webClientToPna.delete()
+                    .uri("/api/v1/nodes/localNode/metric-requests/" + metricRequest.getRemoteMetricRequestUUID())
+                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(metricRequest.getLinkUUID())) // should be the same as the srcNodeUUID
+                    .retrieve()
+                    .bodyToMono(Void.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not delete metric request!"));
+                    })
+                    .block();
+        }
+    }
+
     // TODO: on startup inform InfluxDBService about all existing metric requests that are in DB
 
     // TODO: on shutdown inform InfluxDBService to stop all running metric requests

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -407,6 +408,15 @@ public class MetricsService {
                     })
                     .block();
         }
+    }
+
+    public List<MetricRequest> readAllMetricRequests() {
+        List<MetricRequest> metricRequests = new ArrayList<>();
+        Iterable<MetricRequest> metricRequestIterable = this.metricRequestRepository.findAll();
+        for (MetricRequest metricRequest : metricRequestIterable) {
+            metricRequests.add(metricRequest);
+        }
+        return metricRequests;
     }
 
     // TODO: on startup inform InfluxDBService about all existing metric requests that are in DB

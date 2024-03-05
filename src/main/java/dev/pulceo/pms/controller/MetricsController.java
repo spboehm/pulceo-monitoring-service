@@ -65,6 +65,16 @@ public class MetricsController {
         return ResponseEntity.status(200).body(listOfNodeLinkMetricDTO);
     }
 
+    @GetMapping("/api/v1/metric-requests")
+    public ResponseEntity<List<ShortMetricResponseDTO>> readAllMetricRequests() {
+        List<MetricRequest> metricRequests = this.metricsService.readAllMetricRequests();
+        List<ShortMetricResponseDTO> listOfShortMetricResponseDTO = new ArrayList<>();
+        for (MetricRequest metricRequest : metricRequests) {
+            listOfShortMetricResponseDTO.add(ShortMetricResponseDTO.fromMetricRequest(metricRequest));
+        }
+        return ResponseEntity.status(200).body(listOfShortMetricResponseDTO);
+    }
+
     @DeleteMapping("/api/v1/metric-requests/{metricRequestUUID}")
     public void deleteMetricRequest(@PathVariable UUID metricRequestUUID) {
         this.metricsService.deleteMetricRequest(metricRequestUUID);

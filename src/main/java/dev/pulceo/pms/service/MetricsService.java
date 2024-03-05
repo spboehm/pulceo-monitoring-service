@@ -309,13 +309,13 @@ public class MetricsService {
         WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
 
         // first obtain the hostname
-        UUID srcNodeUUID = resourceUtilizationMetricRequest.getNodeUUID();
+        String srcNodeID = resourceUtilizationMetricRequest.getNodeId();
         NodeDTO srcNode = webClientToPRM.get()
-                .uri("/api/v1/nodes/" + srcNodeUUID)
+                .uri("/api/v1/nodes/" + srcNodeID)
                 .retrieve()
                 .bodyToMono(NodeDTO.class)
                 .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
+                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeID)));
                 })
                 .block();
 
@@ -329,7 +329,7 @@ public class MetricsService {
         WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
         ShortNodeMetricResponseDTO shortNodeMetricResponseDTO = webclientToPNA.post()
                 .uri("/api/v1/nodes/localNode/metric-requests")
-                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNode.getUuid()))
                 .bodyValue(createNewResourceUtilizationDTO)
                 .retrieve()
                 .bodyToMono(ShortNodeMetricResponseDTO.class)
@@ -340,7 +340,7 @@ public class MetricsService {
 
         MetricRequest metricRequest = MetricRequest.fromShortNodeMetricResponseDTO(shortNodeMetricResponseDTO);
         // TODO: set link UUID to achieve an appropriate mapping in cloud
-        metricRequest.setLinkUUID(srcNodeUUID); // global uuid
+        metricRequest.setLinkUUID(srcNode.getUuid()); // global uuid
 //        // TODO: do conversion to DTO and persist then in database
         MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
         // then send the request to the correct pna

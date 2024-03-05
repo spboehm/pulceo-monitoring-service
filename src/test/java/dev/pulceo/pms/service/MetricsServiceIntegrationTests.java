@@ -307,7 +307,7 @@ public class MetricsServiceIntegrationTests {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         ResourceUtilizationMetricRequest resourceUtilizationMetricRequest = ResourceUtilizationMetricRequest.builder()
-                .nodeUUID(srcNodeUUID)
+                .nodeId(String.valueOf(srcNodeUUID))
                 .type("cpu-util")
                 .recurrence("15")
                 .enabled(true)
@@ -339,7 +339,7 @@ public class MetricsServiceIntegrationTests {
         MetricRequest metricRequest = this.metricsService.createNewResourceUtilizationRequest(resourceUtilizationMetricRequest);
 
         // then
-        assertEquals(resourceUtilizationMetricRequest.getNodeUUID(), metricRequest.getRemoteLinkUUID());
+        assertEquals(resourceUtilizationMetricRequest.getNodeId(), metricRequest.getRemoteLinkUUID().toString());
         assertEquals(resourceUtilizationMetricRequest.getType(), metricRequest.getType());
         assertEquals(resourceUtilizationMetricRequest.getRecurrence(), metricRequest.getRecurrence());
         assertEquals(resourceUtilizationMetricRequest.isEnabled(), metricRequest.isEnabled());

@@ -18,14 +18,14 @@ import java.util.UUID;
 @NoArgsConstructor
 @ToString
 public class ResourceUtilizationMetricRequest extends AbstractMetricRequest {
-    private UUID nodeUUID; // remote link UUID
+    private String nodeId; // remote link UUID
     private String type;
     private String recurrence;
     private boolean enabled;
 
     public static ResourceUtilizationMetricRequest fromCreateNewMetricRequestResourceUtilizationDTO(CreateNewMetricRequestResourceUtilizationDTO createNewMetricRequestResourceUtilizationDTO) {
         return ResourceUtilizationMetricRequest.builder()
-                .nodeUUID(createNewMetricRequestResourceUtilizationDTO.getNodeUUID())
+                .nodeId(createNewMetricRequestResourceUtilizationDTO.getNodeId())
                 .type(createNewMetricRequestResourceUtilizationDTO.getType())
                 .recurrence(createNewMetricRequestResourceUtilizationDTO.getRecurrence())
                 .enabled(createNewMetricRequestResourceUtilizationDTO.isEnabled())

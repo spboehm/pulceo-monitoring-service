@@ -408,6 +408,7 @@ public class MetricsService {
                     })
                     .block();
         }
+        this.metricRequestRepository.delete(metricRequest);
     }
 
     public List<MetricRequest> readAllMetricRequests() {

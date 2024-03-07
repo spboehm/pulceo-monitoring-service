@@ -7,6 +7,7 @@ import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.service.MetricsService;
 import jakarta.websocket.server.PathParam;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.*;
 import org.springframework.web.bind.annotation.*;
@@ -71,8 +72,6 @@ public class MetricsController {
         if (linkUUID == null) {
             metricRequests = this.metricsService.readAllMetricRequests();
         } else {
-            System.out.println(linkUUID);
-            System.out.println("here");
             metricRequests = this.metricsService.readMetricRequestsByLinkUUID(linkUUID);
 
         }
@@ -84,6 +83,7 @@ public class MetricsController {
     }
 
     @DeleteMapping("/api/v1/metric-requests/{metricRequestUUID}")
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void deleteMetricRequest(@PathVariable UUID metricRequestUUID) {
         this.metricsService.deleteMetricRequest(metricRequestUUID);
     }

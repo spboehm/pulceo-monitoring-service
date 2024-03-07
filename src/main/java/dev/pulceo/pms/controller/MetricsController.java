@@ -66,8 +66,16 @@ public class MetricsController {
     }
 
     @GetMapping("/api/v1/metric-requests")
-    public ResponseEntity<List<ShortMetricResponseDTO>> readAllMetricRequests() {
-        List<MetricRequest> metricRequests = this.metricsService.readAllMetricRequests();
+    public ResponseEntity<List<ShortMetricResponseDTO>> readAllMetricRequests(@RequestParam(value = "linkUUID", required = false) UUID linkUUID) {
+        List<MetricRequest> metricRequests;
+        if (linkUUID == null) {
+            metricRequests = this.metricsService.readAllMetricRequests();
+        } else {
+            System.out.println(linkUUID);
+            System.out.println("here");
+            metricRequests = this.metricsService.readMetricRequestsByLinkUUID(linkUUID);
+
+        }
         List<ShortMetricResponseDTO> listOfShortMetricResponseDTO = new ArrayList<>();
         for (MetricRequest metricRequest : metricRequests) {
             listOfShortMetricResponseDTO.add(ShortMetricResponseDTO.fromMetricRequest(metricRequest));

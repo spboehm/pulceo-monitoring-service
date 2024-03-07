@@ -419,6 +419,15 @@ public class MetricsService {
         return metricRequests;
     }
 
+    public List<MetricRequest> readMetricRequestsByLinkUUID(UUID linkUUID) {
+        List<MetricRequest> metricRequests = new ArrayList<>();
+        Iterable<MetricRequest> metricRequestIterable = this.metricRequestRepository.findByLinkUUID(linkUUID);
+        for (MetricRequest metricRequest : metricRequestIterable) {
+            metricRequests.add(metricRequest);
+        }
+        return metricRequests;
+    }
+
     // TODO: on startup inform InfluxDBService about all existing metric requests that are in DB
 
     // TODO: on shutdown inform InfluxDBService to stop all running metric requests

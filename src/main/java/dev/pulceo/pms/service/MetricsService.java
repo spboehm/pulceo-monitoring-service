@@ -11,6 +11,7 @@ import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.geo.Metric;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -307,46 +308,75 @@ public class MetricsService {
     }
 
     public MetricRequest createNewResourceUtilizationRequest(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) {
+        // TODO: evalutate nodeId
+        if (resourceUtilizationMetricRequest.getNodeId() == null) {
+            throw new RuntimeException(new MetricsServiceException("Can not create metric request: Node id is missing!"));
+        }
+
         WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
+        List<NodeDTO> allNodes;
+        if ("*".equals(resourceUtilizationMetricRequest.getNodeId())) {
+            System.out.println("here");
+             allNodes = WebClient.create(this.prmEndpoint)
+                    .get()
+                    .uri("/api/v1/nodes")
+                    .retrieve()
+                    .bodyToFlux(NodeDTO.class)
+                    .collectList()
+                    .block();
+        } else {
+            allNodes = List.of(webClientToPRM.get()
+                    .uri("/api/v1/nodes/" + resourceUtilizationMetricRequest.getNodeId())
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Node with id %s does not exist!".formatted(resourceUtilizationMetricRequest.getNodeId())));
+                    })
+                    .block());
+        }
+        MetricRequest lastMetricRequest = null;
+        for (NodeDTO node : allNodes) {
+            // first obtain the hostname
+            String srcNodeID = node.getUuid().toString();
+            NodeDTO srcNode = webClientToPRM.get()
+                    .uri("/api/v1/nodes/" + srcNodeID)
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeID)));
+                    })
+                    .block();
+            System.out.println(srcNode.getHostname());
 
-        // first obtain the hostname
-        String srcNodeID = resourceUtilizationMetricRequest.getNodeId();
-        NodeDTO srcNode = webClientToPRM.get()
-                .uri("/api/v1/nodes/" + srcNodeID)
-                .retrieve()
-                .bodyToMono(NodeDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeID)));
-                })
-                .block();
+            // TODO: Build request
+            CreateNewResourceUtilizationDTO createNewResourceUtilizationDTO = CreateNewResourceUtilizationDTO.builder()
+                    .type(resourceUtilizationMetricRequest.getType())
+                    .recurrence(Integer.parseInt(resourceUtilizationMetricRequest.getRecurrence()))
+                    .enabled(resourceUtilizationMetricRequest.isEnabled())
+                    .build();
 
-        // TODO: Build request
-        CreateNewResourceUtilizationDTO createNewResourceUtilizationDTO = CreateNewResourceUtilizationDTO.builder()
-                .type(resourceUtilizationMetricRequest.getType())
-                .recurrence(Integer.parseInt(resourceUtilizationMetricRequest.getRecurrence()))
-                .enabled(resourceUtilizationMetricRequest.isEnabled())
-                .build();
+            WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
+            ShortNodeMetricResponseDTO shortNodeMetricResponseDTO = webclientToPNA.post()
+                    .uri("/api/v1/nodes/localNode/metric-requests")
+                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNode.getUuid()))
+                    .bodyValue(createNewResourceUtilizationDTO)
+                    .retrieve()
+                    .bodyToMono(ShortNodeMetricResponseDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                    })
+                    .block();
 
-        WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
-        ShortNodeMetricResponseDTO shortNodeMetricResponseDTO = webclientToPNA.post()
-                .uri("/api/v1/nodes/localNode/metric-requests")
-                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNode.getUuid()))
-                .bodyValue(createNewResourceUtilizationDTO)
-                .retrieve()
-                .bodyToMono(ShortNodeMetricResponseDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
-                })
-                .block();
-
-        MetricRequest metricRequest = MetricRequest.fromShortNodeMetricResponseDTO(shortNodeMetricResponseDTO);
-        // TODO: set link UUID to achieve an appropriate mapping in cloud
-        metricRequest.setLinkUUID(srcNode.getUuid()); // global uuid
+            MetricRequest metricRequest = MetricRequest.fromShortNodeMetricResponseDTO(shortNodeMetricResponseDTO);
+            // TODO: set link UUID to achieve an appropriate mapping in cloud
+            metricRequest.setLinkUUID(srcNode.getUuid()); // global uuid
 //        // TODO: do conversion to DTO and persist then in database
-        MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
-        // then send the request to the correct pna
-        this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
-        return savedMetricRequest;
+            MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
+            // then send the request to the correct pna
+            this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+            lastMetricRequest = savedMetricRequest;
+        }
+        return lastMetricRequest;
     }
 
     public void deleteMetricRequest(UUID metricRequestUUID) {

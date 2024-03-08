@@ -1,3 +1,5 @@
+<img src="docs/assets/pulceo-logo-color.png" alt="pulceo-logo" width="25%" height="auto"/>
+
 # pulceo-monitoring-service
 
 ## General Prerequisites
@@ -19,12 +21,7 @@
 ## Run with k3d
 
 ```bash
-mkdir -p /tmp/pulceo-monitoring-service
-mkdir -p /tmp/pulceo-monitoring-service/pms-influxdb-pv-data
-mkdir -p /tmp/pulceo-monitoring-service/pms-influxdb-pv-config
-```
-```bash
-k3d cluster create pulceo-test --api-port 40476 --port 80:80@loadbalancer --port 8089:8089@loadbalancer --volume /tmp/pulceo-monitoring-service/pms-influxdb-pv-data:/pms/pms-influxdb-pv-data --volume /tmp/pulceo-monitoring-service/pms-influxdb-pv-config:/pms/pms-influxdb-pv-config
+k3d cluster create pulceo-test --api-port 40476 --port 80:80@loadbalancer --volume $HOME/k3d-pulceo-volumes:/var/lib/rancher/k3s/storage@all
 ```
 
 **[TODO]: Add a step to generate the secrets**
@@ -77,4 +74,10 @@ HTTP/1.1 200 OK
 Content-Length: 2
 Content-Type: text/plain;charset=UTF-8
 Date: Sat, 02 Mar 2024 16:12:17 GMT
+```
+
+## Undeploy
+
+```bash
+kubectl delete -f pms-deployment.yaml
 ```

@@ -72,6 +72,9 @@ spec:
         - name: pulceo-monitoring-service
           image: ghcr.io/spboehm/pulceo-monitoring-service:main
           imagePullPolicy: Always
+          volumeMounts:
+            - name: psm-pv-db
+              mountPath: /db
           env:
             - name: PRM_HOST
               valueFrom:
@@ -116,6 +119,24 @@ spec:
           ports:
             - containerPort: 7777
               name: web
+      volumes:
+        - name: psm-pv-db
+          persistentVolumeClaim:
+            claimName: psm-pv-db
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: psm-pv-db
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
 
 ---
 apiVersion: v1
@@ -200,10 +221,36 @@ spec:
               name: web
       volumes:
         - name: pms-influxdb-pv-data
-          hostPath:
-            path: /pms/pms-influxdb-pv-data
-            type: Directory
+          persistentVolumeClaim:
+            claimName: pms-influxdb-pv-data
         - name: pms-influxdb-pv-config
-          hostPath:
-            path: /pms/pms-influxdb-pv-config
-            type: Directory
+          persistentVolumeClaim:
+            claimName: pms-influxdb-pv-config
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pms-influxdb-pv-data
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pms-influxdb-pv-config
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

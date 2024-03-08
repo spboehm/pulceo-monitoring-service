@@ -2,6 +2,8 @@
 
 # pulceo-monitoring-service
 
+[OpenAPI definition for pulceo-monitoring-service](https://spboehm.github.io/pulceo-monitoring-service/)
+
 ## General Prerequisites
 
 - Make sure that the following ports are available on the local system:

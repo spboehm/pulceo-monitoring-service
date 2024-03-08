@@ -15,7 +15,8 @@ import java.util.UUID;
 public class CreateNewMetricRequestTcpBwDTO extends CreateNewAbstractMetricRequestDTO {
     private String linkId;
     private String recurrence;
-    private boolean enabled;
+    @Builder.Default
+    private boolean enabled = true;
     // ignored by svc
     @Builder.Default
     private long port = 5000;

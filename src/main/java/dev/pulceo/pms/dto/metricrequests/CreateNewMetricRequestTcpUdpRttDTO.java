@@ -13,7 +13,8 @@ import lombok.experimental.SuperBuilder;
 public class CreateNewMetricRequestTcpUdpRttDTO extends CreateNewAbstractMetricRequestDTO {
     private String linkId;
     private String recurrence;
-    private boolean enabled;
+    @Builder.Default
+    private boolean enabled = true;
     @Builder.Default
     private int rounds = 10;
 

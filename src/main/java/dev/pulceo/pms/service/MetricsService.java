@@ -51,230 +51,319 @@ public class MetricsService {
     }
 
     public MetricRequest createNewIcmpRttMetricRequest(IcmpRttMetricRequest icmpRttMetricRequest) {
-        // linkUUID - on device
-        // TODO: check if link does already exist
-        WebClient webClient = WebClient.create(this.prmEndpoint);
-        NodeLinkDTO nodeLinkDTO = webClient.get()
-                .uri("/api/v1/links/" + icmpRttMetricRequest.getLinkId()) // on cloud
-                .retrieve()
-                .bodyToMono(NodeLinkDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(icmpRttMetricRequest.getLinkId())));
-                })
-                .block();
 
-        // Instruct pna to create a new ICMP RTT metric request
-        // determine srcNode of the link to send the request to the correct pna
+        if (icmpRttMetricRequest.getLinkId() == null) {
+            throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link id is missing!"));
+        }
 
-        // first obtain the hostname
-        UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
-        NodeDTO srcNode = webClient.get()
-                .uri("/api/v1/nodes/" + srcNodeUUID)
-                .retrieve()
-                .bodyToMono(NodeDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
-                })
-                .block();
+        WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
+        List<NodeLinkDTO> allLinks;
 
-        // then send the request to the correct pna
-        CreateNewMetricRequestIcmpRttOnPNADTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttOnPNADTO.builder()
-                .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
-                .type(icmpRttMetricRequest.getType())
-                .recurrence(icmpRttMetricRequest.getRecurrence())
-                .enabled(icmpRttMetricRequest.isEnabled())
-                .build();
+        if ("*".equals(icmpRttMetricRequest.getLinkId())) {
+            allLinks = webClientToPRM
+                    .get()
+                    .uri("/api/v1/links")
+                    .retrieve()
+                    .bodyToFlux(NodeLinkDTO.class)
+                    .collectList()
+                    .block();
+        } else {
+            allLinks = List.of(webClientToPRM.get()
+                    .uri("/api/v1/links/" + icmpRttMetricRequest.getLinkId())
+                    .retrieve()
+                    .bodyToMono(NodeLinkDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(icmpRttMetricRequest.getLinkId())));
+                    })
+                    .block());
+        }
 
-        webClient = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
-        // TODO: proper DTO conversion
-        MetricRequest metricRequest = webClient.post()
-                .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/icmp-rtt-requests")
-                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
-                .bodyValue(createNewMetricRequestIcmpRttDTO)
-                .retrieve()
-                .bodyToMono(MetricRequest.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
-                })
-                .block();
-        // TODO: set link UUID to achieve an appropriate mapping
-        metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global UUID
-        MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
-        // TODO: do conversion to DTO and persist then in database
-        this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
-        return savedMetricRequest;
+        MetricRequest lastMetricRequest = null;
+        for (NodeLinkDTO nodeLink : allLinks) {
+            // linkUUID - on device
+            // TODO: check if link does already exist
+            NodeLinkDTO nodeLinkDTO = webClientToPRM.get()
+                    .uri("/api/v1/links/" + nodeLink.getLinkUUID()) // on cloud
+                    .retrieve()
+                    .bodyToMono(NodeLinkDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(nodeLink.getLinkUUID())));
+                    })
+                    .block();
+
+            // Instruct pna to create a new ICMP RTT metric request
+            // determine srcNode of the link to send the request to the correct pna
+
+            // first obtain the hostname
+            UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
+            NodeDTO srcNode = webClientToPRM.get()
+                    .uri("/api/v1/nodes/" + srcNodeUUID)
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
+                    })
+                    .block();
+
+            // then send the request to the correct pna
+            CreateNewMetricRequestIcmpRttOnPNADTO createNewMetricRequestIcmpRttDTO = CreateNewMetricRequestIcmpRttOnPNADTO.builder()
+                    .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
+                    .type(icmpRttMetricRequest.getType())
+                    .recurrence(icmpRttMetricRequest.getRecurrence())
+                    .enabled(icmpRttMetricRequest.isEnabled())
+                    .build();
+
+            WebClient webClientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
+            // TODO: proper DTO conversion
+            MetricRequest metricRequest = webClientToPNA.post()
+                    .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/icmp-rtt-requests")
+                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                    .bodyValue(createNewMetricRequestIcmpRttDTO)
+                    .retrieve()
+                    .bodyToMono(MetricRequest.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                    })
+                    .block();
+            // TODO: set link UUID to achieve an appropriate mapping
+            metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global UUID
+            MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
+            // TODO: do conversion to DTO and persist then in database
+            this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+            lastMetricRequest = savedMetricRequest;
+        }
+        return lastMetricRequest;
     }
 
     public MetricRequest createNewTcpUdpRttMetricRequest(TcpUdpRttMetricRequest tcpUdpRttMetricRequest) {
-        // linkUUID - on device
-        // TODO: check if link does already exist
-        WebClient webClient = WebClient.create(this.prmEndpoint);
-        NodeLinkDTO nodeLinkDTO = webClient.get()
-                .uri("/api/v1/links/" + tcpUdpRttMetricRequest.getLinkId()) // on cloud
-                .retrieve()
-                .bodyToMono(NodeLinkDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(tcpUdpRttMetricRequest.getLinkId())));
-                })
-                .block();
 
-        // Instruct pna to create a new ICMP RTT metric request
-        // determine srcNode of the link to send the request to the correct pna
-
-        // first obtain the hostname
-        UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
-        NodeDTO srcNode = webClient.get()
-                .uri("/api/v1/nodes/" + srcNodeUUID)
-                .retrieve()
-                .bodyToMono(NodeDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
-                })
-                .block();
-
-        // then send the request to the correct pna
-        CreateNewMetricRequestTcpUdpRttOnPNADTO createNewMetricRequestTcpUdpRttOnPNADTO = CreateNewMetricRequestTcpUdpRttOnPNADTO.builder()
-                .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
-                .type(tcpUdpRttMetricRequest.getType())
-                .recurrence(tcpUdpRttMetricRequest.getRecurrence())
-                .enabled(tcpUdpRttMetricRequest.isEnabled())
-                .rounds(tcpUdpRttMetricRequest.getRounds())
-                .build();
-
-        webClient = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
-        // TODO: proper DTO conversion
-        MetricRequest metricRequest;
-        if (tcpUdpRttMetricRequest.getType().equals("tcp-rtt")) {
-            metricRequest = webClient.post()
-                    .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-rtt-requests")
-                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
-                    .bodyValue(createNewMetricRequestTcpUdpRttOnPNADTO)
-                    .retrieve()
-                    .bodyToMono(MetricRequest.class)
-                    .onErrorResume(error -> {
-                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
-                    })
-                    .block();
-        } else if (tcpUdpRttMetricRequest.getType().equals("udp-rtt")) {
-            metricRequest = webClient.post()
-                    .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/udp-rtt-requests")
-                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
-                    .bodyValue(createNewMetricRequestTcpUdpRttOnPNADTO)
-                    .retrieve()
-                    .bodyToMono(MetricRequest.class)
-                    .onErrorResume(error -> {
-                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
-                    })
-                    .block();
-        } else {
-            throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+        if (tcpUdpRttMetricRequest.getLinkId() == null) {
+            throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link id is missing!"));
         }
 
-        // TODO: set link UUID to achieve an appropriate mapping
-        metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global UUID
-        MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
-        // TODO: do conversion to DTO and persist then in database
-        this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
-        return savedMetricRequest;
+        WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
+        List<NodeLinkDTO> allLinks;
+        if ("*".equals(tcpUdpRttMetricRequest.getLinkId())) {
+            allLinks = WebClient.create(this.prmEndpoint)
+                    .get()
+                    .uri("/api/v1/links")
+                    .retrieve()
+                    .bodyToFlux(NodeLinkDTO.class)
+                    .collectList()
+                    .block();
+        } else {
+            allLinks = List.of(webClientToPRM.get()
+                    .uri("/api/v1/links/" + tcpUdpRttMetricRequest.getLinkId())
+                    .retrieve()
+                    .bodyToMono(NodeLinkDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(tcpUdpRttMetricRequest.getLinkId())));
+                    })
+                    .block());
+        }
+
+        MetricRequest lastMetricRequest = null;
+
+        for (NodeLinkDTO nodeLink : allLinks) {
+            // linkUUID - on device
+            // TODO: check if link does already exist
+            NodeLinkDTO nodeLinkDTO = webClientToPRM.get()
+                    .uri("/api/v1/links/" + nodeLink.getLinkUUID()) // on cloud
+                    .retrieve()
+                    .bodyToMono(NodeLinkDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(tcpUdpRttMetricRequest.getLinkId())));
+                    })
+                    .block();
+
+            // Instruct pna to create a new ICMP RTT metric request
+            // determine srcNode of the link to send the request to the correct pna
+
+            // first obtain the hostname
+            UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
+            NodeDTO srcNode = webClientToPRM.get()
+                    .uri("/api/v1/nodes/" + srcNodeUUID)
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
+                    })
+                    .block();
+
+            // then send the request to the correct pna
+            CreateNewMetricRequestTcpUdpRttOnPNADTO createNewMetricRequestTcpUdpRttOnPNADTO = CreateNewMetricRequestTcpUdpRttOnPNADTO.builder()
+                    .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
+                    .type(tcpUdpRttMetricRequest.getType())
+                    .recurrence(tcpUdpRttMetricRequest.getRecurrence())
+                    .enabled(tcpUdpRttMetricRequest.isEnabled())
+                    .rounds(tcpUdpRttMetricRequest.getRounds())
+                    .build();
+
+            WebClient webClientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
+            // TODO: proper DTO conversion
+            MetricRequest metricRequest;
+            if (tcpUdpRttMetricRequest.getType().equals("tcp-rtt")) {
+                metricRequest = webClientToPNA.post()
+                        .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-rtt-requests")
+                        .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                        .bodyValue(createNewMetricRequestTcpUdpRttOnPNADTO)
+                        .retrieve()
+                        .bodyToMono(MetricRequest.class)
+                        .onErrorResume(error -> {
+                            throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                        })
+                        .block();
+            } else if (tcpUdpRttMetricRequest.getType().equals("udp-rtt")) {
+                metricRequest = webClientToPNA.post()
+                        .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/udp-rtt-requests")
+                        .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                        .bodyValue(createNewMetricRequestTcpUdpRttOnPNADTO)
+                        .retrieve()
+                        .bodyToMono(MetricRequest.class)
+                        .onErrorResume(error -> {
+                            throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                        })
+                        .block();
+            } else {
+                throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+            }
+
+            // TODO: set link UUID to achieve an appropriate mapping
+            metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global UUID
+            MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
+            // TODO: do conversion to DTO and persist then in database
+            this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+            lastMetricRequest = savedMetricRequest;
+        }
+        return lastMetricRequest;
     }
 
     public MetricRequest createNewTcpBwMetricRequest(TcpBwMetricRequest tcpBwMetricRequest) {
-        // linkUUID - on device
-        // TODO: check if link does already exist
-        WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
-        NodeLinkDTO nodeLinkDTO = webClientToPRM.get()
-                .uri("/api/v1/links/" + tcpBwMetricRequest.getLinkId()) // on cloud
-                .retrieve()
-                .bodyToMono(NodeLinkDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(tcpBwMetricRequest.getLinkId())));
-                })
-                .block();
-        // Instruct pna to create a new ICMP RTT metric request
-        // determine srcNode of the link to send the request to the correct pna
-
-        // first obtain the hostname
-        UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
-        NodeDTO srcNode = webClientToPRM.get()
-                .uri("/api/v1/nodes/" + srcNodeUUID)
-                .retrieve()
-                .bodyToMono(NodeDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
-                })
-                .block();
-
-
-        // destNode start iperf3 server
-        UUID destNodeUUID = nodeLinkDTO.getDestNodeUUID();
-        NodeDTO destNode = webClientToPRM.get()
-                .uri("/api/v1/nodes/" + destNodeUUID)
-                .retrieve()
-                .bodyToMono(NodeDTO.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
-                })
-                .block();
-
-        // create new iperf-server using iperf3 server controller
-        WebClient webClientToDestNode = WebClient.create(this.webClientScheme + "://" + destNode.getHostname() + ":7676");
-                String portOfRemoteIperfServer = webClientToDestNode.post()
-                .uri("/api/v1/iperf3-servers")
-                .header("Authorization", "Basic " + getPnaTokenByNodeUUID(destNodeUUID))
-                .retrieve()
-                .bodyToMono(String.class)
-                .onErrorResume(error -> {
-                    throw new RuntimeException(new MetricsServiceException("Can not create iperf3 server!"));
-                })
-                .block();
-
-        // inform src Node about the new iperf server
-        CreateNewMetricRequestTcpBwOnPNADTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwOnPNADTO.builder()
-                .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
-                .port(Long.valueOf(portOfRemoteIperfServer))
-                .type(tcpBwMetricRequest.getType())
-                .recurrence(tcpBwMetricRequest.getRecurrence())
-                .enabled(tcpBwMetricRequest.isEnabled())
-                .bitrate(tcpBwMetricRequest.getBitrate())
-                .time(tcpBwMetricRequest.getTime())
-                .build();
-
-        WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
-        // case udp or tcp because of different API links for the request on pna
-        MetricRequest metricRequest;
-        if (tcpBwMetricRequest.getType().equals("tcp-bw")) {
-            metricRequest = webclientToPNA.post()
-                    .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-bw-requests")
-                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
-                    .bodyValue(createNewMetricRequestTcpBwDTO)
-                    .retrieve()
-                    .bodyToMono(MetricRequest.class)
-                    .onErrorResume(error -> {
-                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
-                    })
-                    .block();
-        } else if (tcpBwMetricRequest.getType().equals("udp-bw")) {
-            metricRequest = webclientToPNA.post()
-                    .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/udp-bw-requests")
-                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
-                    .bodyValue(createNewMetricRequestTcpBwDTO)
-                    .retrieve()
-                    .bodyToMono(MetricRequest.class)
-                    .onErrorResume(error -> {
-                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
-                    })
-                    .block();
-        } else {
-            throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+        if (tcpBwMetricRequest.getLinkId() == null) {
+            throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link id is missing!"));
         }
 
-        // TODO: set link UUID to achieve an appropriate mapping in cloud
-        metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global uuid
-        // TODO: do conversion to DTO and persist then in database
-        MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
-        // then send the request to the correct pna
-        this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
-        return savedMetricRequest;
+        WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
+        List<NodeLinkDTO> allLinks;
+        if ("*".equals(tcpBwMetricRequest.getLinkId())) {
+            allLinks = WebClient.create(this.prmEndpoint)
+                    .get()
+                    .uri("/api/v1/links")
+                    .retrieve()
+                    .bodyToFlux(NodeLinkDTO.class)
+                    .collectList()
+                    .block();
+        } else {
+            allLinks = List.of(webClientToPRM.get()
+                    .uri("/api/v1/links/" + tcpBwMetricRequest.getLinkId())
+                    .retrieve()
+                    .bodyToMono(NodeLinkDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(tcpBwMetricRequest.getLinkId())));
+                    })
+                    .block());
+        }
+
+        MetricRequest lastMetricRequest = null;
+        for (NodeLinkDTO nodeLink : allLinks) {
+
+            // linkUUID - on device
+            // TODO: check if link does already exist
+            NodeLinkDTO nodeLinkDTO = webClientToPRM.get()
+                    .uri("/api/v1/links/" + nodeLink.getLinkUUID()) // on cloud
+                    .retrieve()
+                    .bodyToMono(NodeLinkDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link with id %s does not exist!".formatted(tcpBwMetricRequest.getLinkId())));
+                    })
+                    .block();
+            // Instruct pna to create a new ICMP RTT metric request
+            // determine srcNode of the link to send the request to the correct pna
+
+            // first obtain the hostname
+            UUID srcNodeUUID = nodeLinkDTO.getSrcNodeUUID();
+            NodeDTO srcNode = webClientToPRM.get()
+                    .uri("/api/v1/nodes/" + srcNodeUUID)
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
+                    })
+                    .block();
+
+
+            // destNode start iperf3 server
+            UUID destNodeUUID = nodeLinkDTO.getDestNodeUUID();
+            NodeDTO destNode = webClientToPRM.get()
+                    .uri("/api/v1/nodes/" + destNodeUUID)
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeUUID)));
+                    })
+                    .block();
+
+            // create new iperf-server using iperf3 server controller
+            WebClient webClientToDestNode = WebClient.create(this.webClientScheme + "://" + destNode.getHostname() + ":7676");
+            String portOfRemoteIperfServer = webClientToDestNode.post()
+                    .uri("/api/v1/iperf3-servers")
+                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(destNodeUUID))
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create iperf3 server!"));
+                    })
+                    .block();
+
+            // inform src Node about the new iperf server
+            CreateNewMetricRequestTcpBwOnPNADTO createNewMetricRequestTcpBwDTO = CreateNewMetricRequestTcpBwOnPNADTO.builder()
+                    .linkUUID(nodeLinkDTO.getRemoteNodeLinkUUID()) // replace by the remote link UUID, otherwise the id cannot be found
+                    .port(Long.valueOf(portOfRemoteIperfServer))
+                    .type(tcpBwMetricRequest.getType())
+                    .recurrence(tcpBwMetricRequest.getRecurrence())
+                    .enabled(tcpBwMetricRequest.isEnabled())
+                    .bitrate(tcpBwMetricRequest.getBitrate())
+                    .time(tcpBwMetricRequest.getTime())
+                    .build();
+
+            WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");
+            // case udp or tcp because of different API links for the request on pna
+            MetricRequest metricRequest;
+            if (tcpBwMetricRequest.getType().equals("tcp-bw")) {
+                metricRequest = webclientToPNA.post()
+                        .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/tcp-bw-requests")
+                        .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                        .bodyValue(createNewMetricRequestTcpBwDTO)
+                        .retrieve()
+                        .bodyToMono(MetricRequest.class)
+                        .onErrorResume(error -> {
+                            throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                        })
+                        .block();
+            } else if (tcpBwMetricRequest.getType().equals("udp-bw")) {
+                metricRequest = webclientToPNA.post()
+                        .uri("/api/v1/links/" + nodeLinkDTO.getRemoteNodeLinkUUID() + "/metric-requests/udp-bw-requests")
+                        .header("Authorization", "Basic " + getPnaTokenByNodeUUID(srcNodeUUID))
+                        .bodyValue(createNewMetricRequestTcpBwDTO)
+                        .retrieve()
+                        .bodyToMono(MetricRequest.class)
+                        .onErrorResume(error -> {
+                            throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                        })
+                        .block();
+            } else {
+                throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+            }
+
+            // TODO: set link UUID to achieve an appropriate mapping in cloud
+            metricRequest.setLinkUUID(UUID.fromString(nodeLinkDTO.getLinkUUID())); // global uuid
+            // TODO: do conversion to DTO and persist then in database
+            MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
+            // then send the request to the correct pna
+            this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+            lastMetricRequest = savedMetricRequest;
+        }
+        return lastMetricRequest;
     }
 
     private String getPnaTokenByNodeUUID(UUID nodeUUID) {
@@ -316,7 +405,6 @@ public class MetricsService {
         WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
         List<NodeDTO> allNodes;
         if ("*".equals(resourceUtilizationMetricRequest.getNodeId())) {
-            System.out.println("here");
              allNodes = WebClient.create(this.prmEndpoint)
                     .get()
                     .uri("/api/v1/nodes")
@@ -346,7 +434,6 @@ public class MetricsService {
                         throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(srcNodeID)));
                     })
                     .block();
-            System.out.println(srcNode.getHostname());
 
             // TODO: Build request
             CreateNewResourceUtilizationDTO createNewResourceUtilizationDTO = CreateNewResourceUtilizationDTO.builder()

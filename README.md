@@ -35,6 +35,7 @@ k3d cluster create pulceo-test --api-port 40476 --port 80:80@loadbalancer --volu
 - Apply the following kubernetes manifest to the cluster
 ```bash
 kubectl --kubeconfig=/home/$USER/.kube/config create configmap pms-configmap \
+  --from-literal=PSM_HOST=pulceo-service-manager \
   --from-literal=PRM_HOST=pulceo-resource-manager \
   --from-literal=INFLUXDB_URL=http://pms-influxdb:8086 \
   --from-literal=INFLUXDB_ORG=org \

@@ -81,6 +81,11 @@ spec:
                 configMapKeyRef:
                   name: pms-configmap
                   key: PRM_HOST
+            - name: PSM_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pms-configmap
+                  key: PSM_HOST
             - name: INFLUXDB_URL
               valueFrom:
                 configMapKeyRef:

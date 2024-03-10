@@ -14,6 +14,8 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 public class CreateNewMetricRequestResourceUtilizationDTO extends CreateNewAbstractMetricRequestDTO {
     private String nodeId;
+    @Builder.Default
+    private String resourceType = "node";
     private String recurrence;
     @Builder.Default
     private boolean enabled = true;
@@ -22,6 +24,7 @@ public class CreateNewMetricRequestResourceUtilizationDTO extends CreateNewAbstr
         CreateNewMetricRequestResourceUtilizationDTO createNewMetricRequestResourceUtilizationDTO = (CreateNewMetricRequestResourceUtilizationDTO) createNewAbstractMetricRequestDTO;
         return CreateNewMetricRequestResourceUtilizationDTO.builder()
                 .nodeId(createNewMetricRequestResourceUtilizationDTO.getNodeId())
+                .resourceType(createNewMetricRequestResourceUtilizationDTO.getResourceType())
                 .type(createNewMetricRequestResourceUtilizationDTO.getType())
                 .recurrence(createNewMetricRequestResourceUtilizationDTO.getRecurrence())
                 .enabled(createNewMetricRequestResourceUtilizationDTO.isEnabled())

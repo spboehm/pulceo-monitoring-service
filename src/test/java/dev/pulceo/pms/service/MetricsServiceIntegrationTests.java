@@ -2,6 +2,7 @@ package dev.pulceo.pms.service;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import dev.pulceo.pms.exception.MetricsServiceException;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.repository.NodeLinkMetricRepository;
@@ -303,11 +304,12 @@ public class MetricsServiceIntegrationTests {
     // TODO: add tcp
 
     @Test
-    public void testCreateNewCpuUtilMetricRequest() {
+    public void testCreateNewCpuUtilMetricRequest() throws MetricsServiceException {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         ResourceUtilizationMetricRequest resourceUtilizationMetricRequest = ResourceUtilizationMetricRequest.builder()
                 .nodeId(String.valueOf(srcNodeUUID))
+                .resourceType("node")
                 .type("cpu-util")
                 .recurrence("15")
                 .enabled(true)

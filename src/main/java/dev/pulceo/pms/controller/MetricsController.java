@@ -2,6 +2,7 @@ package dev.pulceo.pms.controller;
 
 import dev.pulceo.pms.dto.metricrequests.*;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
+import dev.pulceo.pms.exception.MetricsServiceException;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.service.MetricsService;
@@ -33,7 +34,7 @@ public class MetricsController {
     }
 
     @PostMapping("/api/v1/metric-requests")
-    public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(@RequestBody CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
+    public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(@RequestBody CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) throws MetricsServiceException {
         // TODO: check type of metric request
         if (createNewAbstractMetricRequestDTO.getType().equals("cpu-util") || createNewAbstractMetricRequestDTO.getType().equals("mem-util") ||
                 createNewAbstractMetricRequestDTO.getType().equals("storage-util") || createNewAbstractMetricRequestDTO.getType().equals("net-util")) {

@@ -1,5 +1,7 @@
 package dev.pulceo.pms.service;
 
+import dev.pulceo.pms.dto.application.ApplicationComponentDTO;
+import dev.pulceo.pms.dto.application.ApplicationDTO;
 import dev.pulceo.pms.dto.link.NodeLinkDTO;
 import dev.pulceo.pms.dto.metricrequests.pna.*;
 import dev.pulceo.pms.dto.node.NodeDTO;
@@ -11,13 +13,11 @@ import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.geo.Metric;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,6 +33,9 @@ public class MetricsService {
 
     @Value("${prm.endpoint}")
     private String prmEndpoint;
+
+    @Value("${psm.endpoint}")
+    private String psmEndpoint;
 
     @Value("${webclient.scheme}")
     private String webClientScheme;
@@ -396,7 +399,86 @@ public class MetricsService {
         return resultList;
     }
 
-    public MetricRequest createNewResourceUtilizationRequest(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) {
+    public MetricRequest createNewResourceUtilizationRequest(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) throws MetricsServiceException {
+        // decide if for node or app
+        if ("node".equals(resourceUtilizationMetricRequest.getResourceType())) {
+            return createNewResourceUtilizationRequestForNode(resourceUtilizationMetricRequest);
+        } else if ("application".equals(resourceUtilizationMetricRequest.getResourceType())) {
+            return createNewResourceUtilizationRequestForApplication(resourceUtilizationMetricRequest);
+        } else {
+            throw new MetricsServiceException("Can not create metric request: Node id or application id is missing!");
+        }
+    }
+
+    private MetricRequest createNewResourceUtilizationRequestForApplication(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) {
+        if (resourceUtilizationMetricRequest.getNodeId() == null) {
+            throw new RuntimeException(new MetricsServiceException("Can not create metric request: Node id is missing!"));
+        }
+
+        WebClient webClientToPSM = WebClient.create(this.psmEndpoint);
+
+        List<ApplicationDTO> allApplications;
+        if ("*".equals(resourceUtilizationMetricRequest.getNodeId())) {
+            allApplications = webClientToPSM
+                    .get()
+                    .uri("/api/v1/applications")
+                    .retrieve()
+                    .bodyToFlux(ApplicationDTO.class)
+                    .collectList()
+                    .block();
+        } else {
+            allApplications = List.of(webClientToPSM.get()
+                    .uri("/api/v1/applications/" + resourceUtilizationMetricRequest.getNodeId())
+                    .retrieve()
+                    .bodyToMono(ApplicationDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request: Application with id %s does not exist!".formatted(resourceUtilizationMetricRequest.getNodeId())));
+                    })
+                    .block());
+        }
+
+        MetricRequest lastMetricRequest = null;
+        for (ApplicationDTO application : allApplications) {
+            // first obtain the remote host information
+            WebClient webClientToPRM = WebClient.create(this.prmEndpoint);
+            NodeDTO remoteNode = webClientToPRM.get()
+                    .uri("/api/v1/nodes/" + application.getNodeId())
+                    .retrieve()
+                    .bodyToMono(NodeDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create link: Source node with id %s does not exist!".formatted(application.getNodeId())));
+                    })
+                    .block();
+
+            // then send the request to the correct pna
+            CreateNewResourceUtilizationDTO createNewResourceUtilizationDTO = CreateNewResourceUtilizationDTO.builder()
+                    .type(resourceUtilizationMetricRequest.getType())
+                    .recurrence(Integer.parseInt(resourceUtilizationMetricRequest.getRecurrence()))
+                    .enabled(resourceUtilizationMetricRequest.isEnabled())
+                    .build();
+
+            WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + remoteNode.getHostname() + ":7676");
+            ShortNodeMetricResponseDTO shortNodeMetricResponseDTO = webclientToPNA.post()
+                    .uri("/api/v1/applications/" + application.getRemoteApplicationUUID() + "/metric-requests")
+                    .header("Authorization", "Basic " + getPnaTokenByNodeUUID(remoteNode.getUuid()))
+                    .bodyValue(createNewResourceUtilizationDTO)
+                    .retrieve()
+                    .bodyToMono(ShortNodeMetricResponseDTO.class)
+                    .onErrorResume(error -> {
+                        throw new RuntimeException(new MetricsServiceException("Can not create metric request!"));
+                    })
+                    .block();
+
+            MetricRequest metricRequest = MetricRequest.fromShortNodeMetricResponseDTO(shortNodeMetricResponseDTO);
+            metricRequest.setLinkUUID(UUID.fromString(application.getApplicationUUID())); // global uuid
+            this.influxDBService.notifyAboutNewMetricRequest(metricRequest);
+            lastMetricRequest = metricRequest;
+        }
+        return lastMetricRequest;
+    }
+
+
+    public MetricRequest createNewResourceUtilizationRequestForNode(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) {
         // TODO: evalutate nodeId
         if (resourceUtilizationMetricRequest.getNodeId() == null) {
             throw new RuntimeException(new MetricsServiceException("Can not create metric request: Node id is missing!"));

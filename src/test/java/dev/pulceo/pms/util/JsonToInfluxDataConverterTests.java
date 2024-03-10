@@ -135,4 +135,16 @@ public class JsonToInfluxDataConverterTests {
         // then
         assertEquals("TCP_RTT,destinationHost=127.0.0.1,deviceId=0247fea1-3ca3-401b-8fa2-b6f83a469680,endTime=2024-01-29T09:07:11.725847321Z,jobUUID=ac122df4-32b0-4c2d-9048-6cfd7971b477,metricType=TCP_RTT,metricUUID=cbd29b61-5955-4743-9c62-6710bf7bcab5,sourceHost=127.0.0.1,startTime=2024-01-29T09:07:11.716082302Z avgRTT=0.007,maxRTT=0.007,minRTT=0.007,tcpConnectionAttempts=1i,tcpFailedConnectionsAbsolute=0i,tcpFailedConnectionsRelative=0.0,tcpSuccessfulConnections=1i", listofPoints.get(0).toLineProtocol());
     }
+
+    @Test
+    public void testConvertEvent() throws Exception {
+        // givne
+        File jsonFile = new File("src/test/java/dev/pulceo/pms/resources/events/event.json");
+        String jsonAsString = mapper.readTree(jsonFile).toString();
+
+        // when
+        List<Point> listofPoints = JsonToInfluxDataConverter.convertEvent(jsonAsString);
+
+        assertEquals("EVENT,eventType=NODE_CREATED,eventUUID=0ca1537d-bbae-4ed0-aad5-aa92645aae09,timestamp=2024-03-10T17:49:51.442707432 payload=\"OnPremNode{onPremProvider=OnPremProvider{providerMetaData=ProviderMetaData{providerName='default', providerType=ON_PREM}}, nodeMetaData=NodeMetaData{remoteNodeUUID=3d068e35-471a-41dc-9771-e964fac72443, pnaUUID=0247fea1-3ca3-401b-8fa2-b6f83a469680, hostname='127.0.0.1'}, node=Node{name='edge-0', type=CLOUD, layer=1, role=WORKLOAD, nodeGroup='', country='Germany', state='Bavaria', city='Bamberg', longitude=0.0, latitude=0.0, cpuResource=CPUResource{cpuCapacity=CPU{modelName='AMD Ryzen 7 3700X 8-Core Processor', cores=8, threads=16, bogoMIPS=7202.77, MIPS=7202.77, GFlop=0.0, minimalFrequency=2200.0, averageFrequency=3313.0854, maximalFrequency=4426.171, shares=16000, slots=0.0}, cpuAllocatable=CPU{modelName='AMD Ryzen 7 3700X 8-Core Processor', cores=8, threads=16, bogoMIPS=7202.77, MIPS=7202.77, GFlop=0.0, minimalFrequency=2200.0, averageFrequency=3313.0854, maximalFrequency=4426.171, shares=16000, slots=0.0}}, memoryResource=MemoryResource{memoryCapacity=Memory{size=62.714092, slots=0}, memoryAllocatable=Memory{size=62.714092, slots=0}}, storageResource=StorageResource{storageCapacity=Storage{size=464.0, slots=0}, storageAllocatable=Storage{size=0.0, slots=0}}}}\"", listofPoints.get(0).toLineProtocol());
+    }
  }

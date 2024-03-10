@@ -184,4 +184,14 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(npingTCPDelayMeasurement));
     }
 
+    public static List<Point> convertEvent(String json) throws JsonProcessingException {
+        JsonNode jsonNode = mapper.readTree(json);
+        Point event = new Point("EVENT");
+        event.addTag("eventUUID", jsonNode.get("eventUUID").asText());
+        event.addTag("timestamp", jsonNode.get("timestamp").asText());
+        event.addTag("eventType", jsonNode.get("eventType").asText());
+        event.addField("payload", jsonNode.get("payload").asText());
+        return new ArrayList<>(List.of(event));
+    }
+
 }

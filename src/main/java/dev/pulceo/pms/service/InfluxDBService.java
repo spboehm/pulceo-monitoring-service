@@ -1,14 +1,13 @@
 package dev.pulceo.pms.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
 import com.influxdb.client.QueryApi;
 import com.influxdb.client.WriteApiBlocking;
-import com.influxdb.client.domain.WritePrecision;
-import com.influxdb.client.write.Point;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
@@ -32,12 +31,10 @@ import org.springframework.messaging.support.GenericMessage;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class InfluxDBService {
@@ -58,6 +55,8 @@ public class InfluxDBService {
 
     private final BlockingQueue<Message<?>> mqttBlockingQueue;
 
+    private final BlockingQueue<Message<?>> mqttBlockingQueueEvent;
+
     private boolean isRunning = true;
 
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -73,27 +72,54 @@ public class InfluxDBService {
     private final NodeLinkMetricRepository nodeLinkMetricRepository;
 
     @Autowired
-    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository) {
+    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent) {
         this.mqttBlockingQueue = mqttBlockingQueue;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
         this.simpMessagingTemplate = simpMessagingTemplate;
         this.nodeLinkMetricRepository = nodeLinkMetricRepository;
         this.nodeMetricRepository = nodeMetricRepository;
+        this.mqttBlockingQueueEvent = mqttBlockingQueueEvent;
     }
 
     @PostConstruct
     private void postConstruct() {
-        threadPoolTaskExecutor.execute(this::init);
+        threadPoolTaskExecutor.execute(this::listenForMetrics);
+        threadPoolTaskExecutor.execute(this::listenForEvents);
     }
 
     @PreDestroy
     private void preDestroy() throws InterruptedException {
         isRunning = false;
         this.mqttBlockingQueue.put(new GenericMessage<>("STOP"));
+        this.mqttBlockingQueueEvent.put(new GenericMessage<>("STOP"));
         threadPoolTaskExecutor.shutdown();
     }
 
-    private void init() {
+    private void listenForEvents() {
+        try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
+            WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
+            while (isRunning) {
+                Message<?> message = mqttBlockingQueueEvent.take();
+                if ("STOP".equals(message.getPayload())) {
+                    logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
+                    return;
+                }
+                // otherwise process workload
+                String payLoadAsJson = (String) message.getPayload();
+                JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
+                writeApi.writePoints(JsonToInfluxDataConverter.convertEvent(jsonNode.toString()));
+                logger.info("Successfully wrote event to InfluxDB: " + payLoadAsJson);
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (JsonMappingException e) {
+            throw new RuntimeException(e);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void listenForMetrics() {
         try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
             while(isRunning) {

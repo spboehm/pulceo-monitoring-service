@@ -38,9 +38,17 @@ public class MQTTConfig {
         return new LinkedBlockingQueue<>();
     }
 
+    @Bean
+    public BlockingQueue<Message<?>> mqttBlockingQueueEvent() { return new LinkedBlockingQueue<>(); }
+
     /* Inbound */
     @Bean
     public MessageChannel mqttInputChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel mqttInputChannelForEvent() {
         return new DirectChannel();
     }
 
@@ -69,6 +77,32 @@ public class MQTTConfig {
         adapter.setOutputChannel(mqttInputChannel());
         return adapter;
     }
+
+    @Bean
+    public MessageProducer inboundEvent() {
+        MqttPahoMessageDrivenChannelAdapter adapter =
+                new MqttPahoMessageDrivenChannelAdapter(UUID.randomUUID().toString(), mqttClientFactory(),
+                        "dt/pulceo/events");
+        adapter.setCompletionTimeout(5000);
+        adapter.setConverter(new DefaultPahoMessageConverter());
+        adapter.setQos(1);
+        adapter.connectComplete(true);
+        adapter.setOutputChannel(mqttInputChannelForEvent());
+        return adapter;
+    }
+
+    @Bean
+    @ServiceActivator(inputChannel = "mqttInputChannelForEvent")
+    public MessageHandler handlerForEvent() {
+        return message -> {
+            try {
+                mqttBlockingQueueEvent().put(message);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+    }
+
 
     @Bean
     @ServiceActivator(inputChannel = "mqttInputChannel")

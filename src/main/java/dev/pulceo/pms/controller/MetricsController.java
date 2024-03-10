@@ -34,7 +34,7 @@ public class MetricsController {
     }
 
     @PostMapping("/api/v1/metric-requests")
-    public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(@RequestBody CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) throws MetricsServiceException {
+    public ResponseEntity<ShortMetricResponseDTO> createNewMetricRequest(@RequestBody CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) throws MetricsServiceException, InterruptedException {
         // TODO: check type of metric request
         if (createNewAbstractMetricRequestDTO.getType().equals("cpu-util") || createNewAbstractMetricRequestDTO.getType().equals("mem-util") ||
                 createNewAbstractMetricRequestDTO.getType().equals("storage-util") || createNewAbstractMetricRequestDTO.getType().equals("net-util")) {
@@ -85,7 +85,7 @@ public class MetricsController {
 
     @DeleteMapping("/api/v1/metric-requests/{metricRequestUUID}")
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
-    public void deleteMetricRequest(@PathVariable UUID metricRequestUUID) {
+    public void deleteMetricRequest(@PathVariable UUID metricRequestUUID) throws InterruptedException {
         this.metricsService.deleteMetricRequest(metricRequestUUID);
     }
 }

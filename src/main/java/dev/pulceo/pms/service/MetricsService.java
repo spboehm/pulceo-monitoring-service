@@ -1,11 +1,12 @@
 package dev.pulceo.pms.service;
 
-import dev.pulceo.pms.dto.application.ApplicationComponentDTO;
 import dev.pulceo.pms.dto.application.ApplicationDTO;
 import dev.pulceo.pms.dto.link.NodeLinkDTO;
 import dev.pulceo.pms.dto.metricrequests.pna.*;
 import dev.pulceo.pms.dto.node.NodeDTO;
 import dev.pulceo.pms.exception.MetricsServiceException;
+import dev.pulceo.pms.model.event.EventType;
+import dev.pulceo.pms.model.event.PulceoEvent;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.repository.MetricRequestRepository;
@@ -40,12 +41,15 @@ public class MetricsService {
     @Value("${webclient.scheme}")
     private String webClientScheme;
 
+    private final EventHandler eventHandler;
+
     @Autowired
-    public MetricsService(MetricRequestRepository metricRequestRepository, SimpMessagingTemplate simpMessagingTemplate, InfluxDBService influxDBService, NodeLinkMetricRepository nodeLinkMetricRepository) {
+    public MetricsService(MetricRequestRepository metricRequestRepository, SimpMessagingTemplate simpMessagingTemplate, InfluxDBService influxDBService, NodeLinkMetricRepository nodeLinkMetricRepository, EventHandler eventHandler) {
         this.metricRequestRepository = metricRequestRepository;
         this.simpMessagingTemplate = simpMessagingTemplate;
         this.influxDBService = influxDBService;
         this.nodeLinkMetricRepository = nodeLinkMetricRepository;
+        this.eventHandler = eventHandler;
     }
 
     // ws
@@ -53,7 +57,7 @@ public class MetricsService {
         simpMessagingTemplate.convertAndSend("/metrics/", "content");
     }
 
-    public MetricRequest createNewIcmpRttMetricRequest(IcmpRttMetricRequest icmpRttMetricRequest) {
+    public MetricRequest createNewIcmpRttMetricRequest(IcmpRttMetricRequest icmpRttMetricRequest) throws InterruptedException {
 
         if (icmpRttMetricRequest.getLinkId() == null) {
             throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link id is missing!"));
@@ -133,12 +137,19 @@ public class MetricsService {
             MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
             // TODO: do conversion to DTO and persist then in database
             this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+
+            PulceoEvent pulceoEvent = PulceoEvent.builder()
+                    .eventType(EventType.LINK_METRIC_REQUEST_CREATED)
+                    .payload(savedMetricRequest.toString())
+                    .build();
+            this.eventHandler.handleEvent(pulceoEvent);
+
             lastMetricRequest = savedMetricRequest;
         }
         return lastMetricRequest;
     }
 
-    public MetricRequest createNewTcpUdpRttMetricRequest(TcpUdpRttMetricRequest tcpUdpRttMetricRequest) {
+    public MetricRequest createNewTcpUdpRttMetricRequest(TcpUdpRttMetricRequest tcpUdpRttMetricRequest) throws InterruptedException {
 
         if (tcpUdpRttMetricRequest.getLinkId() == null) {
             throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link id is missing!"));
@@ -236,12 +247,19 @@ public class MetricsService {
             MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
             // TODO: do conversion to DTO and persist then in database
             this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+
+            PulceoEvent pulceoEvent = PulceoEvent.builder()
+                    .eventType(EventType.LINK_METRIC_REQUEST_CREATED)
+                    .payload(savedMetricRequest.toString())
+                    .build();
+            this.eventHandler.handleEvent(pulceoEvent);
+
             lastMetricRequest = savedMetricRequest;
         }
         return lastMetricRequest;
     }
 
-    public MetricRequest createNewTcpBwMetricRequest(TcpBwMetricRequest tcpBwMetricRequest) {
+    public MetricRequest createNewTcpBwMetricRequest(TcpBwMetricRequest tcpBwMetricRequest) throws InterruptedException {
         if (tcpBwMetricRequest.getLinkId() == null) {
             throw new RuntimeException(new MetricsServiceException("Can not create metric request: Link id is missing!"));
         }
@@ -364,6 +382,13 @@ public class MetricsService {
             MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
             // then send the request to the correct pna
             this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+
+            PulceoEvent pulceoEvent = PulceoEvent.builder()
+                    .eventType(EventType.LINK_METRIC_REQUEST_CREATED)
+                    .payload(savedMetricRequest.toString())
+                    .build();
+            this.eventHandler.handleEvent(pulceoEvent);
+
             lastMetricRequest = savedMetricRequest;
         }
         return lastMetricRequest;
@@ -399,7 +424,7 @@ public class MetricsService {
         return resultList;
     }
 
-    public MetricRequest createNewResourceUtilizationRequest(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) throws MetricsServiceException {
+    public MetricRequest createNewResourceUtilizationRequest(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) throws MetricsServiceException, InterruptedException {
         // decide if for node or app
         if ("node".equals(resourceUtilizationMetricRequest.getResourceType())) {
             return createNewResourceUtilizationRequestForNode(resourceUtilizationMetricRequest);
@@ -410,7 +435,7 @@ public class MetricsService {
         }
     }
 
-    private MetricRequest createNewResourceUtilizationRequestForApplication(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) {
+    private MetricRequest createNewResourceUtilizationRequestForApplication(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) throws InterruptedException {
         if (resourceUtilizationMetricRequest.getNodeId() == null) {
             throw new RuntimeException(new MetricsServiceException("Can not create metric request: Node id is missing!"));
         }
@@ -471,14 +496,22 @@ public class MetricsService {
 
             MetricRequest metricRequest = MetricRequest.fromShortNodeMetricResponseDTO(shortNodeMetricResponseDTO);
             metricRequest.setLinkUUID(UUID.fromString(application.getApplicationUUID())); // global uuid
+            MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
             this.influxDBService.notifyAboutNewMetricRequest(metricRequest);
+
+            PulceoEvent pulceoEvent = PulceoEvent.builder()
+                    .eventType(EventType.APPLICATION_METRIC_REQUEST_CREATED)
+                    .payload(savedMetricRequest.toString())
+                    .build();
+            this.eventHandler.handleEvent(pulceoEvent);
+
             lastMetricRequest = metricRequest;
         }
         return lastMetricRequest;
     }
 
 
-    public MetricRequest createNewResourceUtilizationRequestForNode(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) {
+    public MetricRequest createNewResourceUtilizationRequestForNode(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) throws InterruptedException {
         // TODO: evalutate nodeId
         if (resourceUtilizationMetricRequest.getNodeId() == null) {
             throw new RuntimeException(new MetricsServiceException("Can not create metric request: Node id is missing!"));
@@ -543,12 +576,19 @@ public class MetricsService {
             MetricRequest savedMetricRequest = this.metricRequestRepository.save(metricRequest);
             // then send the request to the correct pna
             this.influxDBService.notifyAboutNewMetricRequest(savedMetricRequest);
+
+            PulceoEvent pulceoEvent = PulceoEvent.builder()
+                    .eventType(EventType.NODE_METRIC_REQUEST_CREATED)
+                    .payload(savedMetricRequest.toString())
+                    .build();
+            this.eventHandler.handleEvent(pulceoEvent);
+
             lastMetricRequest = savedMetricRequest;
         }
         return lastMetricRequest;
     }
 
-    public void deleteMetricRequest(UUID metricRequestUUID) {
+    public void deleteMetricRequest(UUID metricRequestUUID) throws InterruptedException {
         // TODO: delete metric request on PNA
         MetricRequest metricRequest = this.metricRequestRepository.findByUuid(metricRequestUUID);
 
@@ -607,6 +647,13 @@ public class MetricsService {
                     })
                     .block();
         }
+
+        PulceoEvent pulceoEvent = PulceoEvent.builder()
+                .eventType(EventType.METRIC_REQUEST_DELETED)
+                .payload(metricRequest.toString())
+                .build();
+        this.eventHandler.handleEvent(pulceoEvent);
+
         this.metricRequestRepository.delete(metricRequest);
     }
 

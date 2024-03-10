@@ -58,7 +58,7 @@ public class MetricsServiceIntegrationTests {
     }
 
     @Test
-    public void testCreateNewMetricRequestIcmpRTT() {
+    public void testCreateNewMetricRequestIcmpRTT() throws InterruptedException {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
@@ -115,7 +115,7 @@ public class MetricsServiceIntegrationTests {
     }
 
     @Test
-    public void testCreateNewMetricRequestTcpUdpWithTCP() {
+    public void testCreateNewMetricRequestTcpUdpWithTCP() throws InterruptedException {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
@@ -173,7 +173,7 @@ public class MetricsServiceIntegrationTests {
     }
 
     @Test
-    public void testCreateNewMetricRequestTcpUdpWithUDP() {
+    public void testCreateNewMetricRequestTcpUdpWithUDP() throws InterruptedException {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         UUID linkUUID = UUID.fromString("ea9084cf-97bb-451e-8220-4bdda327839e");
@@ -231,7 +231,7 @@ public class MetricsServiceIntegrationTests {
     }
 
     @Test
-    public void testCreateNewMetricRequestTcpBw () {
+    public void testCreateNewMetricRequestTcpBw () throws InterruptedException {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         UUID destNodeUUID = UUID.fromString("d6421210-6759-4973-bad3-7f47bcb133c1");
@@ -304,7 +304,7 @@ public class MetricsServiceIntegrationTests {
     // TODO: add tcp
 
     @Test
-    public void testCreateNewCpuUtilMetricRequest() throws MetricsServiceException {
+    public void testCreateNewCpuUtilMetricRequest() throws MetricsServiceException, InterruptedException {
         // given
         UUID srcNodeUUID = UUID.fromString("0b1c6697-cb29-4377-bcf8-9fd61ac6c0f3");
         ResourceUtilizationMetricRequest resourceUtilizationMetricRequest = ResourceUtilizationMetricRequest.builder()

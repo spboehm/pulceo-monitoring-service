@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class InfluxDBService {
@@ -57,7 +58,7 @@ public class InfluxDBService {
 
     private final BlockingQueue<Message<?>> mqttBlockingQueueEvent;
 
-    private boolean isRunning = true;
+    private final AtomicBoolean atomicBoolean = new AtomicBoolean(true);
 
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
@@ -89,7 +90,7 @@ public class InfluxDBService {
 
     @PreDestroy
     private void preDestroy() throws InterruptedException {
-        isRunning = false;
+        this.atomicBoolean.set(false);
         this.mqttBlockingQueue.put(new GenericMessage<>("STOP"));
         this.mqttBlockingQueueEvent.put(new GenericMessage<>("STOP"));
         threadPoolTaskExecutor.shutdown();
@@ -98,31 +99,31 @@ public class InfluxDBService {
     private void listenForEvents() {
         try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
-            while (isRunning) {
-                Message<?> message = mqttBlockingQueueEvent.take();
-                if ("STOP".equals(message.getPayload())) {
-                    logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
-                    return;
+            while (atomicBoolean.get()) {
+                try {
+                    Message<?> message = mqttBlockingQueueEvent.take();
+                    if ("STOP".equals(message.getPayload())) {
+                        logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
+                        return;
+                    }
+                    // otherwise process workload
+                    String payLoadAsJson = (String) message.getPayload();
+                    JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertEvent(jsonNode.toString()));
+                    logger.info("Successfully wrote event to InfluxDB: " + payLoadAsJson);
+                } catch (InterruptedException e) {
+                    this.atomicBoolean.set(false);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
                 }
-                // otherwise process workload
-                String payLoadAsJson = (String) message.getPayload();
-                JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
-                writeApi.writePoints(JsonToInfluxDataConverter.convertEvent(jsonNode.toString()));
-                logger.info("Successfully wrote event to InfluxDB: " + payLoadAsJson);
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (JsonMappingException e) {
-            throw new RuntimeException(e);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
         }
     }
 
     private void listenForMetrics() {
         try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
-            while(isRunning) {
+            while(atomicBoolean.get()) {
                 Message<?> message = mqttBlockingQueue.take();
                 if ("STOP".equals(message.getPayload())) {
                     logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
@@ -282,7 +283,8 @@ public class InfluxDBService {
             }
         } catch (InterruptedException e) {
             logger.info("InfluxDBService received termination signal...shutdown initiated");
-            Thread.currentThread().interrupt();
+            this.atomicBoolean.set(false);
+//            Thread.currentThread().interrupt();
         } catch (JsonProcessingException e) {
             logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
         }

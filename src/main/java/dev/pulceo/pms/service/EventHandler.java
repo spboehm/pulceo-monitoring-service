@@ -54,8 +54,8 @@ public class EventHandler {
                     }
                     this.eventServiceChannel.send(new GenericMessage<>(event));
                 } catch (InterruptedException e) {
+                    this.isRunning.set(false);
                     System.out.println("Event handler interrupted");
-                } finally {
                     for (PulceoEvent event : eventQueue) {
                         this.eventServiceChannel.send(new GenericMessage<>(event));
                     }

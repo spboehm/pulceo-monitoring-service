@@ -6,10 +6,7 @@ import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-
-import java.util.UUID;
 
 @Entity
 @SuperBuilder
@@ -25,7 +22,7 @@ public class ResourceUtilizationMetricRequest extends AbstractMetricRequest {
 
     public static ResourceUtilizationMetricRequest fromCreateNewMetricRequestResourceUtilizationDTO(CreateNewMetricRequestResourceUtilizationDTO createNewMetricRequestResourceUtilizationDTO) {
         return ResourceUtilizationMetricRequest.builder()
-                .nodeId(createNewMetricRequestResourceUtilizationDTO.getNodeId())
+                .nodeId(createNewMetricRequestResourceUtilizationDTO.getResourceId())
                 .resourceType(createNewMetricRequestResourceUtilizationDTO.getResourceType())
                 .type(createNewMetricRequestResourceUtilizationDTO.getType())
                 .recurrence(createNewMetricRequestResourceUtilizationDTO.getRecurrence())

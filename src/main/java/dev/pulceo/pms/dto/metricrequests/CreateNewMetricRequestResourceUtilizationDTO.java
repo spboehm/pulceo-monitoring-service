@@ -6,14 +6,12 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.util.UUID;
-
 @Data
 @SuperBuilder
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class CreateNewMetricRequestResourceUtilizationDTO extends CreateNewAbstractMetricRequestDTO {
-    private String nodeId;
+    private String resourceId;
     @Builder.Default
     private String resourceType = "node";
     private String recurrence;
@@ -23,7 +21,7 @@ public class CreateNewMetricRequestResourceUtilizationDTO extends CreateNewAbstr
     public static CreateNewMetricRequestResourceUtilizationDTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
         CreateNewMetricRequestResourceUtilizationDTO createNewMetricRequestResourceUtilizationDTO = (CreateNewMetricRequestResourceUtilizationDTO) createNewAbstractMetricRequestDTO;
         return CreateNewMetricRequestResourceUtilizationDTO.builder()
-                .nodeId(createNewMetricRequestResourceUtilizationDTO.getNodeId())
+                .resourceId(createNewMetricRequestResourceUtilizationDTO.getResourceId())
                 .resourceType(createNewMetricRequestResourceUtilizationDTO.getResourceType())
                 .type(createNewMetricRequestResourceUtilizationDTO.getType())
                 .recurrence(createNewMetricRequestResourceUtilizationDTO.getRecurrence())

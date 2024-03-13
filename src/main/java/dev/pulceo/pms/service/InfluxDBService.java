@@ -84,8 +84,8 @@ public class InfluxDBService {
 
     @PostConstruct
     private void postConstruct() {
-        threadPoolTaskExecutor.execute(this::listenForMetrics);
-        threadPoolTaskExecutor.execute(this::listenForEvents);
+        threadPoolTaskExecutor.submit(this::listenForMetrics);
+        threadPoolTaskExecutor.submit(this::listenForEvents);
     }
 
     @PreDestroy

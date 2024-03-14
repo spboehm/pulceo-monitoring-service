@@ -21,9 +21,9 @@ public class CreateNewMetricRequestTcpBwDTO extends CreateNewAbstractMetricReque
     @Builder.Default
     private long port = 5000;
     @Builder.Default
-    private int bitrate = 0;
+    private int bitrate = 50;
     @Builder.Default
-    private int time = 10;
+    private int time = 5;
 
     public static CreateNewMetricRequestTcpBwDTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
         CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = (CreateNewMetricRequestTcpBwDTO) createNewAbstractMetricRequestDTO;

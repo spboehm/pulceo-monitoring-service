@@ -101,6 +101,7 @@ public class InfluxDBService {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
             while (atomicBoolean.get()) {
                 try {
+                    logger.info("InfluxDBService is listening for events...");
                     Message<?> message = mqttBlockingQueueEvent.take();
                     if ("STOP".equals(message.getPayload())) {
                         logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
@@ -124,6 +125,7 @@ public class InfluxDBService {
         try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
             while(atomicBoolean.get()) {
+                logger.info("InfluxDBService is listening for metrics...");
                 Message<?> message = mqttBlockingQueue.take();
                 if ("STOP".equals(message.getPayload())) {
                     logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");

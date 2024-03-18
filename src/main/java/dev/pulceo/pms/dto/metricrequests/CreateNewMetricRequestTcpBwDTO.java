@@ -24,6 +24,8 @@ public class CreateNewMetricRequestTcpBwDTO extends CreateNewAbstractMetricReque
     private int bitrate = 50;
     @Builder.Default
     private int time = 5;
+    @Builder.Default
+    private String strategy = "random"; // ordered, random
 
     public static CreateNewMetricRequestTcpBwDTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
         CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO = (CreateNewMetricRequestTcpBwDTO) createNewAbstractMetricRequestDTO;
@@ -35,6 +37,7 @@ public class CreateNewMetricRequestTcpBwDTO extends CreateNewAbstractMetricReque
                 .port(createNewMetricRequestTcpBwDTO.getPort())
                 .bitrate(createNewMetricRequestTcpBwDTO.getBitrate())
                 .time(createNewMetricRequestTcpBwDTO.getTime())
+                .strategy(createNewMetricRequestTcpBwDTO.getStrategy())
                 .build();
     }
 

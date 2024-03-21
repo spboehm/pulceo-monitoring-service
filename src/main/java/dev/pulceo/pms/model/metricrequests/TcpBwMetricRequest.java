@@ -26,7 +26,7 @@ public class TcpBwMetricRequest extends AbstractMetricRequest {
     @Builder.Default
     private int time = 10;
     @Builder.Default
-    private String strategy = "random"; // ordered, random
+    private int initialDelay = 0; // ordered, random
 
     public static TcpBwMetricRequest fromCreateNewMetricRequestTcpBwDTO(CreateNewMetricRequestTcpBwDTO createNewMetricRequestTcpBwDTO) {
         return TcpBwMetricRequest.builder()
@@ -37,7 +37,7 @@ public class TcpBwMetricRequest extends AbstractMetricRequest {
                 .port(createNewMetricRequestTcpBwDTO.getPort())
                 .bitrate(createNewMetricRequestTcpBwDTO.getBitrate())
                 .time(createNewMetricRequestTcpBwDTO.getTime())
-                .strategy(createNewMetricRequestTcpBwDTO.getStrategy())
+                .initialDelay(createNewMetricRequestTcpBwDTO.getInitialDelay())
                 .build();
     }
 }

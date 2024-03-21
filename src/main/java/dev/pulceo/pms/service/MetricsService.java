@@ -286,6 +286,7 @@ public class MetricsService {
         }
 
         MetricRequest lastMetricRequest = null;
+        int seq = 0;
         for (NodeLinkDTO nodeLink : allLinks) {
 
             // linkUUID - on device
@@ -345,6 +346,7 @@ public class MetricsService {
                     .enabled(tcpBwMetricRequest.isEnabled())
                     .bitrate(tcpBwMetricRequest.getBitrate())
                     .time(tcpBwMetricRequest.getTime())
+                    .initialDelay(tcpBwMetricRequest.getInitialDelay() * seq++)
                     .build();
 
             WebClient webclientToPNA = WebClient.create(this.webClientScheme + "://" + srcNode.getHostname() + ":7676");

@@ -23,6 +23,8 @@ public class CreateNewMetricRequestTcpBwOnPNADTO extends CreateNewAbstractMetric
     private int bitrate = 0;
     @Builder.Default
     private int time = 10;
+    @Builder.Default
+    private int initialDelay = 0; // ordered, random
 
     public static CreateNewMetricRequestTcpBwOnPNADTO fromAbstractMetricRequestDTO(CreateNewAbstractMetricRequestDTO createNewAbstractMetricRequestDTO) {
         CreateNewMetricRequestTcpBwOnPNADTO createNewMetricRequestTcpBwDTO = (CreateNewMetricRequestTcpBwOnPNADTO) createNewAbstractMetricRequestDTO;
@@ -34,6 +36,7 @@ public class CreateNewMetricRequestTcpBwOnPNADTO extends CreateNewAbstractMetric
                 .port(createNewMetricRequestTcpBwDTO.getPort())
                 .bitrate(createNewMetricRequestTcpBwDTO.getBitrate())
                 .time(createNewMetricRequestTcpBwDTO.getTime())
+                .initialDelay(createNewMetricRequestTcpBwDTO.getInitialDelay())
                 .build();
     }
 

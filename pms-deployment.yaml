@@ -217,6 +217,8 @@ spec:
                   name: pms-credentials
                   key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
           volumeMounts:
+            - name: pms-pv-db
+              mountPath: /db
             - name: pms-influxdb-pv-data
               mountPath: /var/lib/influxdb2
             - name: pms-influxdb-pv-config
@@ -225,12 +227,29 @@ spec:
             - containerPort: 8086
               name: web
       volumes:
+        - name: pms-pv-db
+          persistentVolumeClaim:
+            claimName: pms-pv-db
         - name: pms-influxdb-pv-data
           persistentVolumeClaim:
             claimName: pms-influxdb-pv-data
         - name: pms-influxdb-pv-config
           persistentVolumeClaim:
             claimName: pms-influxdb-pv-config
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pms-pv-db
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
 
 ---
 apiVersion: v1

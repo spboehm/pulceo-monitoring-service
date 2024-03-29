@@ -59,6 +59,9 @@ public class MQTTConfig {
     @Bean
     public BlockingQueue<Message<?>> mqttBlockingQueueEvent() { return new LinkedBlockingQueue<>(); }
 
+    @Bean
+    public BlockingQueue<Message<?>> mqttBlockingQueueRequest() { return new LinkedBlockingQueue<>(); }
+
     /* Inbound */
     @Bean
     public MessageChannel mqttInputChannel() {
@@ -67,6 +70,11 @@ public class MQTTConfig {
 
     @Bean
     public MessageChannel mqttInputChannelForEvent() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel mqttInputChannelForRequest() {
         return new DirectChannel();
     }
 
@@ -110,15 +118,16 @@ public class MQTTConfig {
     }
 
     @Bean
-    @ServiceActivator(inputChannel = "mqttInputChannelForEvent")
-    public MessageHandler handlerForEvent() {
-        return message -> {
-            try {
-                mqttBlockingQueueEvent().put(message);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        };
+    public MessageProducer inboundRequest() {
+        MqttPahoMessageDrivenChannelAdapter adapter =
+                new MqttPahoMessageDrivenChannelAdapter(UUID.randomUUID().toString(), mqttClientFactory(),
+                        "dt/pulceo/requests");
+        adapter.setCompletionTimeout(5000);
+        adapter.setConverter(new DefaultPahoMessageConverter());
+        adapter.setQos(1);
+        adapter.connectComplete(true);
+        adapter.setOutputChannel(mqttInputChannelForRequest());
+        return adapter;
     }
 
     @Bean
@@ -132,4 +141,29 @@ public class MQTTConfig {
             }
         };
     }
+
+    @Bean
+    @ServiceActivator(inputChannel = "mqttInputChannelForEvent")
+    public MessageHandler handlerForEvent() {
+        return message -> {
+            try {
+                mqttBlockingQueueEvent().put(message);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+    }
+
+    @Bean
+    @ServiceActivator(inputChannel = "mqttInputChannelForRequest")
+    public MessageHandler handlerForRequest() {
+        return message -> {
+            try {
+                mqttBlockingQueueRequest().put(message);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+    }
+
 }

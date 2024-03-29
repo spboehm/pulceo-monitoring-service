@@ -35,6 +35,8 @@ public class JsonToInfluxDataConverter {
                 return convertTCPBWMetric(jsonNode);
             case "UDP_BW":
                 return convertUDPBWMetric(jsonNode);
+            case "EVENT":
+                return convertEvent(json);
             default:
                 throw new IllegalArgumentException("Unknown metric type: " + type);
         }

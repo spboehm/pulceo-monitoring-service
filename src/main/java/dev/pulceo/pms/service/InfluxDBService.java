@@ -58,6 +58,8 @@ public class InfluxDBService {
 
     private final BlockingQueue<Message<?>> mqttBlockingQueueEvent;
 
+    private final BlockingQueue<Message<?>> mqttBlockingQueueRequest;
+
     private final AtomicBoolean atomicBoolean = new AtomicBoolean(true);
 
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -73,19 +75,21 @@ public class InfluxDBService {
     private final NodeLinkMetricRepository nodeLinkMetricRepository;
 
     @Autowired
-    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent) {
+    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent, BlockingQueue<Message<?>> mqttBlockingQueueRequest) {
         this.mqttBlockingQueue = mqttBlockingQueue;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
         this.simpMessagingTemplate = simpMessagingTemplate;
         this.nodeLinkMetricRepository = nodeLinkMetricRepository;
         this.nodeMetricRepository = nodeMetricRepository;
         this.mqttBlockingQueueEvent = mqttBlockingQueueEvent;
+        this.mqttBlockingQueueRequest = mqttBlockingQueueRequest;
     }
 
     @PostConstruct
     private void postConstruct() {
         threadPoolTaskExecutor.submit(this::listenForMetrics);
         threadPoolTaskExecutor.submit(this::listenForEvents);
+        threadPoolTaskExecutor.submit(this::listenForRequests);
     }
 
     @PreDestroy
@@ -93,7 +97,36 @@ public class InfluxDBService {
         this.atomicBoolean.set(false);
         this.mqttBlockingQueue.put(new GenericMessage<>("STOP"));
         this.mqttBlockingQueueEvent.put(new GenericMessage<>("STOP"));
+        this.mqttBlockingQueueRequest.put(new GenericMessage<>("STOP"));
         threadPoolTaskExecutor.shutdown();
+    }
+
+    private void listenForRequests() {
+        try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
+            WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
+            while (atomicBoolean.get()) {
+                try {
+                    logger.info("InfluxDBService is listening for requests...");
+                    Message<?> message = mqttBlockingQueueRequest.take();
+                    if ("STOP".equals(message.getPayload())) {
+                        logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
+                        return;
+                    }
+                    // otherwise process workload
+                    String payLoadAsJson = (String) message.getPayload();
+                    JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertRequest(jsonNode.toString()));
+                    logger.info("Successfully wrote request to InfluxDB: " + payLoadAsJson);
+                } catch (InterruptedException e) {
+                    logger.info("InfluxDBService received termination signal...shutdown initiated");
+                    this.atomicBoolean.set(false);
+                } catch (JsonProcessingException e) {
+                    logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
+                } catch (Exception e) {
+                    logger.error("An error occurred while processing event: " + e.getMessage());
+                }
+            }
+        }
     }
 
     private void listenForEvents() {
@@ -115,7 +148,9 @@ public class InfluxDBService {
                 } catch (InterruptedException e) {
                     this.atomicBoolean.set(false);
                 } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
+                    logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
+                } catch (Exception e) {
+                    logger.error("An error occurred while processing event: " + e.getMessage());
                 }
             }
         }
@@ -124,171 +159,172 @@ public class InfluxDBService {
     private void listenForMetrics() {
         try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
-            while(atomicBoolean.get()) {
-                logger.info("InfluxDBService is listening for metrics...");
-                Message<?> message = mqttBlockingQueue.take();
-                if ("STOP".equals(message.getPayload())) {
-                    logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
-                    return;
-                }
-                // otherwise process workload
-                String payLoadAsJson = (String) message.getPayload();
-                writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
-                logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
-                // TODO: check for running metric-requests, send raw data
-                JsonNode metric = this.objectMapper.readTree(payLoadAsJson);
-                // convert from jobUUID to remoteLinkUUID
-                UUID remoteMetricRequestUUID = UUID.fromString(metric.get("metric").get("jobUUID").asText());
-                if (metricRequests.containsKey(remoteMetricRequestUUID)) {
-                    MetricRequest metricRequest = metricRequests.get(remoteMetricRequestUUID);
-                    // TODO: determine type of metric, transformer and send to endpoint
-                    switch (metricRequest.getType()) {
-                        case "cpu-util":
-                            // TODO: implement here
-                            String queryStringForCPUUtil = InfluxQueryBuilder.queryLastRawRecord(bucket, "CPU_UTIL", "usageCPUPercentage", metricRequest.getRemoteMetricRequestUUID().toString());
-                            QueryApi queryApiForCPUUtil = influxDBClient.getQueryApi();
-                            List<FluxTable> cpuUtilTables = queryApiForCPUUtil.query(queryStringForCPUUtil);
-                            for (FluxTable table : cpuUtilTables) {
-                                List<FluxRecord> records = table.getRecords();
-                                for (FluxRecord record : records) {
-                                    NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "%");
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
-                                    // store for archiving purposes and fast access
-                                    this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
-                                }
-                            }
-                            break;
-                        case "mem-util":
-                            // TODO: implement here
-                            String queryStringForMemUtil = InfluxQueryBuilder.queryLastRawRecord(bucket, "MEM_UTIL", "usageMemoryPercentage", metricRequest.getRemoteMetricRequestUUID().toString());
-                            QueryApi queryApiForMEMUtil = influxDBClient.getQueryApi();
-                            List<FluxTable> memUtilTables = queryApiForMEMUtil.query(queryStringForMemUtil);
-                            for (FluxTable table : memUtilTables) {
-                                List<FluxRecord> records = table.getRecords();
-                                for (FluxRecord record : records) {
-                                    NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "%");
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
-                                    // store for archiving purposes and fast access
-                                    this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
-                                }
-                            }
-                            break;
-                        case "storage-util":
-                            String queryStringForStorageUtil = InfluxQueryBuilder.queryLastRawRecord(bucket, "STORAGE_UTIL", "usageStoragePercentage", metricRequest.getRemoteMetricRequestUUID().toString());
-                            QueryApi queryApiForStorageUtil = influxDBClient.getQueryApi();
-                            List<FluxTable> storageUtilTables = queryApiForStorageUtil.query(queryStringForStorageUtil);
-                            for (FluxTable table : storageUtilTables) {
-                                List<FluxRecord> records = table.getRecords();
-                                for (FluxRecord record : records) {
-                                    NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "%");
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
-                                    // store for archiving purposes and fast access
-                                    this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
-                                }
-                            }
-                            break;
-                        case "net-util":
-                            for (String field : List.of("txBytes", "rxBytes")) {
-                                String queryStringForNetUtilTx = InfluxQueryBuilder.queryLastRawRecord(bucket, "NET_UTIL", field, metricRequest.getRemoteMetricRequestUUID().toString());
-                                QueryApi queryApiForNetUtilTx = influxDBClient.getQueryApi();
-                                List<FluxTable> netUtilTxTables = queryApiForNetUtilTx.query(queryStringForNetUtilTx);
-                                for (FluxTable table : netUtilTxTables) {
+            while (atomicBoolean.get()) {
+                try {
+                    logger.info("InfluxDBService is listening for metrics...");
+                    Message<?> message = mqttBlockingQueue.take();
+                    if ("STOP".equals(message.getPayload())) {
+                        logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
+                        return;
+                    }
+                    // otherwise process workload
+                    String payLoadAsJson = (String) message.getPayload();
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
+                    logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
+                    // TODO: check for running metric-requests, send raw data
+                    JsonNode metric = this.objectMapper.readTree(payLoadAsJson);
+                    // convert from jobUUID to remoteLinkUUID
+                    UUID remoteMetricRequestUUID = UUID.fromString(metric.get("metric").get("jobUUID").asText());
+                    if (metricRequests.containsKey(remoteMetricRequestUUID)) {
+                        MetricRequest metricRequest = metricRequests.get(remoteMetricRequestUUID);
+                        // TODO: determine type of metric, transformer and send to endpoint
+                        switch (metricRequest.getType()) {
+                            case "cpu-util":
+                                // TODO: implement here
+                                String queryStringForCPUUtil = InfluxQueryBuilder.queryLastRawRecord(bucket, "CPU_UTIL", "usageCPUPercentage", metricRequest.getRemoteMetricRequestUUID().toString());
+                                QueryApi queryApiForCPUUtil = influxDBClient.getQueryApi();
+                                List<FluxTable> cpuUtilTables = queryApiForCPUUtil.query(queryStringForCPUUtil);
+                                for (FluxTable table : cpuUtilTables) {
                                     List<FluxRecord> records = table.getRecords();
                                     for (FluxRecord record : records) {
-                                        NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "bytes");
-                                        nodeMetricDTO.setMetricType("NET_UTIL_" + field.toUpperCase());
+                                        NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "%");
                                         simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
                                         // store for archiving purposes and fast access
                                         this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
                                     }
                                 }
-                            }
-                            break;
-                        case "icmp-rtt":
-                            String queryString = InfluxQueryBuilder.queryLastRawRecord(bucket, "ICMP_RTT", "rttAvg", metricRequest.getRemoteMetricRequestUUID().toString());
-                            QueryApi queryApi = influxDBClient.getQueryApi();
-                            List<FluxTable> tables = queryApi.query(queryString);
-                            for (FluxTable table : tables) {
-                                List<FluxRecord> records = table.getRecords();
-                                for (FluxRecord record : records) {
-                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
-                                    // store for archiving purposes and fast access
-                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                break;
+                            case "mem-util":
+                                // TODO: implement here
+                                String queryStringForMemUtil = InfluxQueryBuilder.queryLastRawRecord(bucket, "MEM_UTIL", "usageMemoryPercentage", metricRequest.getRemoteMetricRequestUUID().toString());
+                                QueryApi queryApiForMEMUtil = influxDBClient.getQueryApi();
+                                List<FluxTable> memUtilTables = queryApiForMEMUtil.query(queryStringForMemUtil);
+                                for (FluxTable table : memUtilTables) {
+                                    List<FluxRecord> records = table.getRecords();
+                                    for (FluxRecord record : records) {
+                                        NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "%");
+                                        simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
+                                        // store for archiving purposes and fast access
+                                        this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
+                                    }
                                 }
-                            }
-                            break;
-                        case "tcp-rtt":
-                            String queryStringTcpRtt = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_RTT", "avgRTT", metricRequest.getRemoteMetricRequestUUID().toString());
-                            QueryApi queryApiTcpRtt = influxDBClient.getQueryApi();
-                            List<FluxTable> tablesTcpRTT = queryApiTcpRtt.query(queryStringTcpRtt);
-                            for (FluxTable table : tablesTcpRTT) {
-                                List<FluxRecord> records = table.getRecords();
-                                for (FluxRecord record : records) {
-                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
-                                    // store for archiving purposes and fast access
-                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                break;
+                            case "storage-util":
+                                String queryStringForStorageUtil = InfluxQueryBuilder.queryLastRawRecord(bucket, "STORAGE_UTIL", "usageStoragePercentage", metricRequest.getRemoteMetricRequestUUID().toString());
+                                QueryApi queryApiForStorageUtil = influxDBClient.getQueryApi();
+                                List<FluxTable> storageUtilTables = queryApiForStorageUtil.query(queryStringForStorageUtil);
+                                for (FluxTable table : storageUtilTables) {
+                                    List<FluxRecord> records = table.getRecords();
+                                    for (FluxRecord record : records) {
+                                        NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "%");
+                                        simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
+                                        // store for archiving purposes and fast access
+                                        this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
+                                    }
                                 }
-                            }
-                            // TODO: implement this
-                            break;
-                        case "udp-rtt":
-                            String queryStringUdpRtt = InfluxQueryBuilder.queryLastRawRecord(bucket, "UDP_RTT", "avgRTT", metricRequest.getRemoteMetricRequestUUID().toString());
-                            QueryApi queryApiUdpRtt = influxDBClient.getQueryApi();
-                            List<FluxTable> tablesUdpRTT = queryApiUdpRtt.query(queryStringUdpRtt);
-                            for (FluxTable table : tablesUdpRTT) {
-                                List<FluxRecord> records = table.getRecords();
-                                for (FluxRecord record : records) {
-                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
-                                    // store for archiving purposes and fast access
-                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                break;
+                            case "net-util":
+                                for (String field : List.of("txBytes", "rxBytes")) {
+                                    String queryStringForNetUtilTx = InfluxQueryBuilder.queryLastRawRecord(bucket, "NET_UTIL", field, metricRequest.getRemoteMetricRequestUUID().toString());
+                                    QueryApi queryApiForNetUtilTx = influxDBClient.getQueryApi();
+                                    List<FluxTable> netUtilTxTables = queryApiForNetUtilTx.query(queryStringForNetUtilTx);
+                                    for (FluxTable table : netUtilTxTables) {
+                                        List<FluxRecord> records = table.getRecords();
+                                        for (FluxRecord record : records) {
+                                            NodeMetricDTO nodeMetricDTO = NodeMetricDTO.fromFluxRecord(record, metricRequest, "bytes");
+                                            nodeMetricDTO.setMetricType("NET_UTIL_" + field.toUpperCase());
+                                            simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeMetricDTO));
+                                            // store for archiving purposes and fast access
+                                            this.nodeMetricRepository.save(NodeMetric.fromNodeLinkMetricDTO(nodeMetricDTO));
+                                        }
+                                    }
                                 }
-                            }
-                            break;
-                        case "tcp-bw":
-                            String queryStringTcpBw = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_BW", "bitrate", metricRequest.getRemoteMetricRequestUUID().toString());
-                            QueryApi queryApiTcpBw = influxDBClient.getQueryApi();
-                            List<FluxTable> tablesTcpBw = queryApiTcpBw.query(queryStringTcpBw);
-                            for (FluxTable table : tablesTcpBw) {
-                                List<FluxRecord> records = table.getRecords();
-                                for (FluxRecord record : records) {
-                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "Mbit/s");
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
-                                    // store for archiving purposes and fast access
-                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                break;
+                            case "icmp-rtt":
+                                String queryString = InfluxQueryBuilder.queryLastRawRecord(bucket, "ICMP_RTT", "rttAvg", metricRequest.getRemoteMetricRequestUUID().toString());
+                                QueryApi queryApi = influxDBClient.getQueryApi();
+                                List<FluxTable> tables = queryApi.query(queryString);
+                                for (FluxTable table : tables) {
+                                    List<FluxRecord> records = table.getRecords();
+                                    for (FluxRecord record : records) {
+                                        NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
+                                        simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                        // store for archiving purposes and fast access
+                                        this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                    }
                                 }
-                            }
-                            break;
-                        case "udp-bw":
-                            String queryStringUdpBw = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_BW", "bitrate", metricRequest.getRemoteMetricRequestUUID().toString());
-                            QueryApi queryApiUdpBw = influxDBClient.getQueryApi();
-                            List<FluxTable> tablesUdpBw = queryApiUdpBw.query(queryStringUdpBw);
-                            for (FluxTable table : tablesUdpBw) {
-                                List<FluxRecord> records = table.getRecords();
-                                for (FluxRecord record : records) {
-                                    NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "Mbit/s");
-                                    simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
-                                    // store for archiving purposes and fast access
-                                    this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                break;
+                            case "tcp-rtt":
+                                String queryStringTcpRtt = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_RTT", "avgRTT", metricRequest.getRemoteMetricRequestUUID().toString());
+                                QueryApi queryApiTcpRtt = influxDBClient.getQueryApi();
+                                List<FluxTable> tablesTcpRTT = queryApiTcpRtt.query(queryStringTcpRtt);
+                                for (FluxTable table : tablesTcpRTT) {
+                                    List<FluxRecord> records = table.getRecords();
+                                    for (FluxRecord record : records) {
+                                        NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
+                                        simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                        // store for archiving purposes and fast access
+                                        this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                    }
                                 }
-                            }
-                            break;
-                        default:
-                            logger.error("Unknown metric type: " + metricRequest.getType());
-                            break;
+                                // TODO: implement this
+                                break;
+                            case "udp-rtt":
+                                String queryStringUdpRtt = InfluxQueryBuilder.queryLastRawRecord(bucket, "UDP_RTT", "avgRTT", metricRequest.getRemoteMetricRequestUUID().toString());
+                                QueryApi queryApiUdpRtt = influxDBClient.getQueryApi();
+                                List<FluxTable> tablesUdpRTT = queryApiUdpRtt.query(queryStringUdpRtt);
+                                for (FluxTable table : tablesUdpRTT) {
+                                    List<FluxRecord> records = table.getRecords();
+                                    for (FluxRecord record : records) {
+                                        NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "ms");
+                                        simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                        // store for archiving purposes and fast access
+                                        this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                    }
+                                }
+                                break;
+                            case "tcp-bw":
+                                String queryStringTcpBw = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_BW", "bitrate", metricRequest.getRemoteMetricRequestUUID().toString());
+                                QueryApi queryApiTcpBw = influxDBClient.getQueryApi();
+                                List<FluxTable> tablesTcpBw = queryApiTcpBw.query(queryStringTcpBw);
+                                for (FluxTable table : tablesTcpBw) {
+                                    List<FluxRecord> records = table.getRecords();
+                                    for (FluxRecord record : records) {
+                                        NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "Mbit/s");
+                                        simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                        // store for archiving purposes and fast access
+                                        this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                    }
+                                }
+                                break;
+                            case "udp-bw":
+                                String queryStringUdpBw = InfluxQueryBuilder.queryLastRawRecord(bucket, "TCP_BW", "bitrate", metricRequest.getRemoteMetricRequestUUID().toString());
+                                QueryApi queryApiUdpBw = influxDBClient.getQueryApi();
+                                List<FluxTable> tablesUdpBw = queryApiUdpBw.query(queryStringUdpBw);
+                                for (FluxTable table : tablesUdpBw) {
+                                    List<FluxRecord> records = table.getRecords();
+                                    for (FluxRecord record : records) {
+                                        NodeLinkMetricDTO nodeLinkMetricDTO = NodeLinkMetricDTO.fromFluxRecord(record, metricRequest, "Mbit/s");
+                                        simpMessagingTemplate.convertAndSend("/metrics/+", this.objectMapper.writeValueAsString(nodeLinkMetricDTO));
+                                        // store for archiving purposes and fast access
+                                        this.nodeLinkMetricRepository.save(NodeLinkMetric.fromNodeLinkMetricDTO(nodeLinkMetricDTO));
+                                    }
+                                }
+                                break;
+                            default:
+                                logger.error("Unknown metric type: " + metricRequest.getType());
+                                break;
+                        }
+                    } else {
+                        logger.error("Unkown metric request UUID: " + remoteMetricRequestUUID);
                     }
-                } else {
-                    logger.error("Unkown metric request UUID: " + remoteMetricRequestUUID);
+                } catch (InterruptedException e) {
+                    logger.info("InfluxDBService received termination signal...shutdown initiated");
+                    this.atomicBoolean.set(false);
+                } catch (JsonProcessingException e) {
+                    logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
                 }
             }
-        } catch (InterruptedException e) {
-            logger.info("InfluxDBService received termination signal...shutdown initiated");
-            this.atomicBoolean.set(false);
-//            Thread.currentThread().interrupt();
-        } catch (JsonProcessingException e) {
-            logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
         }
     }
 

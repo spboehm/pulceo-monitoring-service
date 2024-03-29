@@ -194,4 +194,18 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(event));
     }
 
+    public static List<Point> convertRequest(String json) throws JsonProcessingException {
+        JsonNode jsonNode = mapper.readTree(json);
+        Point request = new Point("REQUEST");
+        request.addTag("requestUUID", jsonNode.get("requestUUID").asText());
+        request.addTag("timestamp", jsonNode.get("timestamp").asText());
+        request.addTag("requestType", jsonNode.get("requestType").asText());
+        request.addTag("sourceHost", jsonNode.get("sourceHost").asText());
+        request.addTag("destinationHost", jsonNode.get("destinationHost").asText());
+        request.addTag("resource", jsonNode.get("resource").asText());
+        request.addField("value", jsonNode.get("value").asDouble());
+        request.addTag("unit", jsonNode.get("unit").asText());
+        return new ArrayList<>(List.of(request));
+    }
+
 }

@@ -1,0 +1,10 @@
+{
+  "requestUUID": "3185584c-75d6-4840-aad6-72ede5888b2f",
+  "timestamp": "2024-03-10T17:49:51.442707432",
+  "requestType": "req_rtt",
+  "sourceHost": "127.0.0.1",
+  "destinationHost": "127.0.0.2",
+  "resource": "/temperature",
+  "value": 85.4,
+  "unit": "ms"
+}

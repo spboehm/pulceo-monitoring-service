@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static dev.pulceo.pms.model.metricrequests.InternalMetricType.UDP_BW;
@@ -48,13 +49,14 @@ public class MetricsQueryService {
         influxDBClient.close();
     }
 
-    public ShortNodeLinkMetricDTO queryRangeNodeLinkMetrics(String metricType, String aggregation) throws MetricsQueryServiceException {
+    public List<ShortNodeLinkMetricDTO> queryRangeNodeLinkMetrics(String metricType, String aggregation) throws MetricsQueryServiceException {
         QueryApi queryApi = influxDBClient.getQueryApi();
         String influxQuery;
         String unit;
         switch (metricType) {
             case "ICMP_RTT":
                 influxQuery = InfluxQueryBuilder.queryNodeLinkRttMetricWithAggregation(bucket, metricType, "rttAvg", aggregation);
+                System.out.println(influxQuery);
                 unit = "ms";
                 break;
             case "TCP_BW":
@@ -69,13 +71,14 @@ public class MetricsQueryService {
                 throw new MetricsQueryServiceException("Invalid metric type");
         }
         List<FluxTable> nodeLinkMetricsTables = queryApi.query(influxQuery);
+        List<ShortNodeLinkMetricDTO> shortNodeLinkMetricDTOs = new ArrayList<>();
         for (FluxTable table : nodeLinkMetricsTables) {
             List<FluxRecord> records = table.getRecords();
             for (FluxRecord record : records) {
-                return ShortNodeLinkMetricDTO.fromFluxRecord(record, unit);
+                shortNodeLinkMetricDTOs.add(ShortNodeLinkMetricDTO.fromFluxRecord(record, unit));
             }
         }
-        throw new MetricsQueryServiceException();
+        return shortNodeLinkMetricDTOs;
     }
 
 }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 public class MetricsQueryController {
@@ -24,20 +25,14 @@ public class MetricsQueryController {
     }
 
     @GetMapping("/api/v1/node-link-metrics")
-    public ResponseEntity<ShortNodeLinkMetricDTO> getNodeLinkMetrics(@RequestParam(defaultValue = "ICMP_RTT") String measurement, @RequestParam(defaultValue = "limit(n:10)") String aggregation) throws MetricsQueryServiceException {
-        ShortNodeLinkMetricDTO shortNodeLinkMetricDTO;
+    public ResponseEntity<List<ShortNodeLinkMetricDTO>> getNodeLinkMetrics(@RequestParam(defaultValue = "ICMP_RTT") String measurement, @RequestParam(defaultValue = "limit(n:10)") String aggregation) throws MetricsQueryServiceException {
+        List<ShortNodeLinkMetricDTO> shortNodeLinkMetricDTO;
         switch (aggregation) {
-            case "min":
+            case "min", "max":
                 shortNodeLinkMetricDTO = metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation + "()");
                 break;
-            case "max":
-                shortNodeLinkMetricDTO = metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation + "()");
-                break;
-            case "mean":
-                shortNodeLinkMetricDTO = ShortNodeLinkMetricDTO.builder().build();
-                break;
-            case "median":
-                shortNodeLinkMetricDTO = ShortNodeLinkMetricDTO.builder().build();
+            case "mean", "median":
+                shortNodeLinkMetricDTO = List.of(ShortNodeLinkMetricDTO.builder().build());
                 break;
             default:
                 if (aggregation.startsWith("limit")) {
@@ -49,7 +44,6 @@ public class MetricsQueryController {
         }
         return ResponseEntity.status(200).body(shortNodeLinkMetricDTO);
     }
-
 
     @ExceptionHandler(value = MetricsQueryServiceException.class)
     public ResponseEntity<CustomErrorResponse> handleCloudRegistrationException(MetricsQueryServiceException nodeServiceException) {

@@ -4,6 +4,8 @@ import dev.pulceo.pms.model.event.EventType;
 import dev.pulceo.pms.model.event.PulceoEvent;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.integration.channel.PublishSubscribeChannel;
 import org.springframework.messaging.support.GenericMessage;
@@ -25,6 +27,7 @@ public class EventHandler {
 
     private final AtomicBoolean isRunning = new AtomicBoolean(true);
 
+    private final Logger logger = LoggerFactory.getLogger(EventHandler.class);
 
     @Autowired
     public EventHandler(ThreadPoolTaskExecutor threadPoolTaskExecutor, BlockingQueue<PulceoEvent> eventQueue, PublishSubscribeChannel eventServiceChannel ) {
@@ -56,8 +59,8 @@ public class EventHandler {
                     }
                     this.eventServiceChannel.send(new GenericMessage<>(event));
                 } catch (InterruptedException e) {
+                    logger.info("Initiate shutdown of EventHandler...");
                     this.isRunning.set(false);
-                    System.out.println("Event handler interrupted");
                     for (PulceoEvent event : eventQueue) {
                         this.eventServiceChannel.send(new GenericMessage<>(event));
                     }

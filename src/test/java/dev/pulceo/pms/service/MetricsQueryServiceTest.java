@@ -82,6 +82,9 @@ public class MetricsQueryServiceTest {
         processBuilder.inheritIO();
         Process influxWriteCMDProcess = processBuilder.start();
         influxWriteCMDProcess.waitFor(5, TimeUnit.SECONDS);
+        if (influxWriteCMDProcess.exitValue() != 0) {
+            throw new IOException("Could not write CSV file to InfluxDB: " + influxWriteCMDProcess.exitValue());
+        }
         closeProcess(influxWriteCMDProcess);
     }
 

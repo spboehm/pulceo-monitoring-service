@@ -35,7 +35,6 @@ public class MetricsQueryServiceTest {
     private final static String org = "org";
     private final static String bucket = "test-bucket";
     private final static String influxDBUrl = influxDBHost + "?readTimeout=30000&writeTimeout=30000&connectTimeout=30000";
-    private static final org.slf4j.Logger log = LoggerFactory.getLogger(MetricsQueryServiceTest.class);
 
     @Autowired
     MetricsQueryService metricsQueryService;

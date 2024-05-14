@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
-import org.modelmapper.internal.bytebuddy.implementation.bind.annotation.Super;
 
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -20,9 +20,12 @@ import java.util.Objects;
 @NoArgsConstructor
 public class MetricExport extends BaseEntity {
 
+    private UUID metricExportRequestUUID;
     private MetricType metricType;
     private long numberOfRecords;
     private String filename;
+    @Builder.Default()
+    private String url = "";
     @Builder.Default
     private MetricExportState metricExportState = MetricExportState.PENDING;
 

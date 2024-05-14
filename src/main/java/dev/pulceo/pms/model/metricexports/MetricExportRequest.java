@@ -1,5 +1,6 @@
 package dev.pulceo.pms.model.metricexports;
 
+import dev.pulceo.pms.dto.metricexports.MetricExportRequestDTO;
 import dev.pulceo.pms.model.BaseEntity;
 import dev.pulceo.pms.model.metric.MetricType;
 import jakarta.persistence.Entity;
@@ -17,6 +18,12 @@ import java.util.Objects;
 public class MetricExportRequest extends BaseEntity {
 
     private MetricType metricType;
+
+    public static MetricExportRequest fromMetricExportRequestDTO(MetricExportRequestDTO metricExportRequestDTO) {
+        return MetricExportRequest.builder()
+                .metricType(metricExportRequestDTO.getMetricType())
+                .build();
+    }
 
     @Override
     public final boolean equals(Object o) {

@@ -55,6 +55,9 @@ public class MetricsQueryService {
     @Value("${pms.data.dir}")
     private String pmsDatDir;
 
+    @Value("${pulceo.lb.endpoint}")
+    private String pulceoLBEndpoint;
+
     private InfluxDBClient influxDBClient;
 
     private final AtomicBoolean atomicBoolean = new AtomicBoolean(true);
@@ -163,8 +166,8 @@ public class MetricsQueryService {
         MetricExport metricExport = MetricExport.builder()
                 .metricType(metricExportRequest.getMetricType())
                 .numberOfRecords(numberOfRecords)
-                .filename(filename)
                 .build();
+        metricExport.setUrl(pulceoLBEndpoint + "/api/v1/metric-exports/" + metricExport.getUuid() + "/blobs/" + filename);
         MetricExport savedMetricExport = this.metricExportRepository.save(metricExport);
         try {
             this.metricExportQueue.put(savedMetricExport.getId());
@@ -173,6 +176,12 @@ public class MetricsQueryService {
             throw new MetricsQueryServiceException("Could not put metric export in queue!", e);
         }
         return savedMetricExport;
+    }
+
+    public List<MetricExport> readAllMetricExports() {
+        List<MetricExport> metricExportList = new ArrayList<>();
+        this.metricExportRepository.findAll().forEach(metricExportList::add);
+        return metricExportList;
     }
 
     private void getMeasurementAsCSV(MetricType measurement, String filename) throws InterruptedException, IOException, MetricsQueryServiceException {

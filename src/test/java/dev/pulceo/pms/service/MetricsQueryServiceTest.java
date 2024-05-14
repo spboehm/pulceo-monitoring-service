@@ -32,12 +32,10 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -71,8 +69,7 @@ public class MetricsQueryServiceTest {
             bucketsApi.createBucket(bucket, orgId);
 
             // import data
-            File file = new File("src/test/resources/metricexports/cpu_util.csv");
-            writeCSVFileToInfluxDB(file);
+            writeCSVFileToInfluxDB(new File("src/test/resources/metricexports/cpu_util.csv"));
         }
     }
 
@@ -95,27 +92,11 @@ public class MetricsQueryServiceTest {
     }
 
     private static void writeCSVFileToInfluxDB(File file) throws IOException, InterruptedException {
-        try {
-            String influxWriteCMD = String.format("INFLUX_ORG=org INFLUX_TOKEN=token /usr/local/bin/influx write --bucket %s --file %s", bucket, file.getAbsolutePath());
-            ProcessBuilder processBuilder = new ProcessBuilder("/usr/local/bin/influx", "write", "--bucket", "test-bucket", "--file", "/home/sebastian.boehm/git/dissertation/pulceo-monitoring-service/src/test/resources/metricexports/cpu_util.csv");
-            processBuilder.environment().clear();
-            processBuilder.environment().put("INFLUX_ORG", org);
-            processBuilder.environment().put("INFLUX_TOKEN", token);
-            processBuilder.redirectOutput(ProcessBuilder.Redirect.to(new File("/tmp/influx_write.log")));
-            processBuilder.redirectError(ProcessBuilder.Redirect.to(new File("/tmp/influx_write_error.log")));
-            Process influxWriteCMDProcess = processBuilder.start();
-            influxWriteCMDProcess.waitFor(10, TimeUnit.SECONDS);
-            if (influxWriteCMDProcess.exitValue() != 0) {
-                List<String> strings = new ArrayList<>();
-                strings.add("Could not write data to InfluxDB");
-                strings.addAll(Files.readAllLines(Paths.get("/tmp/influx_write_error.log"), Charset.defaultCharset()));
-                throw new IOException(strings.toString());
-            }
-            closeProcess(influxWriteCMDProcess);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+        ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", "INFLUX_ORG=org INFLUX_TOKEN=token /usr/local/bin/influx write --bucket test-bucket --file " + file.getAbsolutePath() + " ;exit");
+        processBuilder.inheritIO();
+        Process influxWriteCMDProcess = processBuilder.start();
+        influxWriteCMDProcess.waitFor(5, TimeUnit.SECONDS);
+        closeProcess(influxWriteCMDProcess);
     }
 
     private static void closeProcess(Process process) throws IOException {

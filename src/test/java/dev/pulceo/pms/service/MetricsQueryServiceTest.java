@@ -13,7 +13,6 @@ import dev.pulceo.pms.model.metricexports.MetricExportState;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -79,7 +78,7 @@ public class MetricsQueryServiceTest {
     }
 
     private static void writeCSVFileToInfluxDB(File file) throws IOException, InterruptedException {
-        ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", "INFLUX_ORG=org INFLUX_TOKEN=token /usr/local/bin/influx write --bucket test-bucket --file " + file.getAbsolutePath() + " ;exit");
+        ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", String.format("INFLUX_ORG=org INFLUX_TOKEN=token /usr/local/bin/influx write --bucket %s --file %s", bucket, file.getAbsolutePath()));
         processBuilder.inheritIO();
         Process influxWriteCMDProcess = processBuilder.start();
         influxWriteCMDProcess.waitFor(5, TimeUnit.SECONDS);

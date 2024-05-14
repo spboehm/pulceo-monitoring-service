@@ -1,4 +1,5 @@
 package dev.pulceo.pms.service;
+
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
 import com.influxdb.client.QueryApi;
@@ -19,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedWriter;
@@ -89,12 +89,11 @@ public class MetricsQueryService {
     }
 
     private void waitForMetricExports() {
-        System.out.println("MetricsQueryService started");
         while (atomicBoolean.get()) {
             try {
-                logger.info("MetricsQueryService is waiting for metric exports");
+                logger.info("MetricsQueryService is listening for metric exports requests...");
                 long metricExportId = metricExportQueue.take();
-                logger.info("MetricsQueryService received metric export with id {}", metricExportId);
+                logger.info("MetricsQueryService received metric export request with id {}", metricExportId);
                 if (metricExportId == -1) {
                     logger.info("MetricsQueryService received termination signal by poison pill...shutdown initiated");
                     return;
@@ -107,11 +106,11 @@ public class MetricsQueryService {
                 logger.info("MetricsQueryService was interrupted while waiting for metric exports");
                 this.atomicBoolean.set(false);
             } catch (MetricsQueryServiceException e) {
-                logger.error("Could not get measurement as CSV", e);
+                logger.error("Could not get measurements as CSV", e);
             } catch (IOException e) {
-                logger.error("Could not write measurement as CSV", e);
+                logger.error("Could not write measurements as CSV", e);
             } catch (NoSuchElementException e) {
-                logger.error("Could not find metric export", e);
+                logger.error("Could not find metric export request", e);
             }
         }
         logger.info("MetricsQueryService successfully stopped!");

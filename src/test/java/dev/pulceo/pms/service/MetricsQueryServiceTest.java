@@ -11,7 +11,6 @@ import dev.pulceo.pms.model.metricexports.MetricExport;
 import dev.pulceo.pms.model.metricexports.MetricExportRequest;
 import dev.pulceo.pms.model.metricexports.MetricExportState;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,7 +31,7 @@ public class MetricsQueryServiceTest {
     private final static String influxDBHost= "http://localhost:8086";
     private final static String token = "token";
     private final static String org = "org";
-    private final static String bucket = "test-bucket";
+    private final static String bucket = "bucket";
     private final static String influxDBUrl = influxDBHost + "?readTimeout=30000&writeTimeout=30000&connectTimeout=30000";
 
     @Autowired
@@ -41,7 +40,6 @@ public class MetricsQueryServiceTest {
     @BeforeAll
     static void setupClass() throws InterruptedException, IOException {
         try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org)) {
-
             // delete bucket
             BucketsApi bucketsApi = influxDBClient.getBucketsApi();
             Optional<Bucket> foundBucket = Optional.ofNullable(bucketsApi.findBucketByName(bucket));
@@ -53,16 +51,13 @@ public class MetricsQueryServiceTest {
             OrganizationsApi organizationsApi = influxDBClient.getOrganizationsApi();
             String orgId = organizationsApi.findOrganizations().stream().findFirst().orElseThrow().getId();
             bucketsApi.createBucket(bucket, orgId);
-
-            // import data
-            writeCSVFileToInfluxDB(new File("src/test/resources/metricexports/cpu_util.csv"));
         }
     }
 
     @Test
-    @Disabled
-    public void testGetMeasurementAsCSV() throws MetricsQueryServiceException {
-        // given
+    public void testGetMeasurementAsCSV() throws MetricsQueryServiceException, IOException, InterruptedException {
+        // import data
+        writeCSVFileToInfluxDB(new File("src/test/resources/metricexports/cpu_util.csv"));
         MetricExportRequest metricExportRequest = MetricExportRequest
                 .builder()
                 .metricType(MetricType.CPU_UTIL)
@@ -78,14 +73,18 @@ public class MetricsQueryServiceTest {
     }
 
     private static void writeCSVFileToInfluxDB(File file) throws IOException, InterruptedException {
-        ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", String.format("INFLUX_ORG=org INFLUX_TOKEN=token /usr/local/bin/influx write --bucket %s --file %s", bucket, file.getAbsolutePath()));
-        processBuilder.inheritIO();
-        Process influxWriteCMDProcess = processBuilder.start();
-        influxWriteCMDProcess.waitFor(5, TimeUnit.SECONDS);
-        if (influxWriteCMDProcess.exitValue() != 0) {
-            throw new IOException("Could not write CSV file to InfluxDB: " + influxWriteCMDProcess.exitValue());
+        Process influxWriteCMDProcess = null;
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", String.format("INFLUX_ORG=org INFLUX_TOKEN=token /usr/local/bin/influx write --bucket %s --file %s", bucket, file.getAbsolutePath()));
+            processBuilder.inheritIO();
+            influxWriteCMDProcess = processBuilder.start();
+            influxWriteCMDProcess.waitFor(5, TimeUnit.SECONDS);
+            if (influxWriteCMDProcess.exitValue() != 0) {
+                throw new IOException("Could not write CSV file to InfluxDB: " + influxWriteCMDProcess.exitValue());
+            }
+        } finally {
+            closeProcess(influxWriteCMDProcess);
         }
-        closeProcess(influxWriteCMDProcess);
     }
 
     private static void closeProcess(Process process) throws IOException {

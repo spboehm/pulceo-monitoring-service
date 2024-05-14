@@ -169,6 +169,8 @@ gradle-app.setting
 
 # End of https://www.toptal.com/developers/gitignore/api/gradle,java,intellij
 
-
 # sqlite db
 *.db
+
+# pms-data
+pms-data/

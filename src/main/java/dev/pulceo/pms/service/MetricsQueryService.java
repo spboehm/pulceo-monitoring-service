@@ -99,10 +99,15 @@ public class MetricsQueryService {
                     logger.info("MetricsQueryService received termination signal by poison pill...shutdown initiated");
                     return;
                 }
-                MetricExport metricExport = metricExportRepository.findById(metricExportId).orElseThrow();
-                metricExport.setMetricExportState(MetricExportState.RUNNING);
-                this.getMeasurementAsCSV(metricExport.getMetricType(), metricExport.getFilename());
-                metricExport.setMetricExportState(MetricExportState.COMPLETED);
+                MetricExport pendingMetricExport = metricExportRepository.findById(metricExportId).orElseThrow();
+                pendingMetricExport.setMetricExportState(MetricExportState.RUNNING);
+                this.metricExportRepository.save(pendingMetricExport);
+
+                this.getMeasurementAsCSV(pendingMetricExport.getMetricType(), pendingMetricExport.getFilename());
+
+                MetricExport runningMetricRequest = metricExportRepository.findById(metricExportId).orElseThrow();
+                runningMetricRequest.setMetricExportState(MetricExportState.COMPLETED);
+                this.metricExportRepository.save(runningMetricRequest);
             } catch (InterruptedException e) {
                 logger.info("MetricsQueryService was interrupted while waiting for metric exports");
                 this.atomicBoolean.set(false);
@@ -159,6 +164,7 @@ public class MetricsQueryService {
 
     public MetricExport createMetricExport(MetricExportRequest metricExportRequest) throws MetricsQueryServiceException {
         long numberOfRecords = this.getNumberOfRecords(metricExportRequest.getMetricType());
+        logger.info("Number of records for metric type {} is {}", metricExportRequest.getMetricType(), numberOfRecords);
         if (numberOfRecords == 0) {
             throw new MetricsQueryServiceException("No records found for metric type %s".formatted(metricExportRequest.getMetricType()));
         }
@@ -166,6 +172,7 @@ public class MetricsQueryService {
         MetricExport metricExport = MetricExport.builder()
                 .metricType(metricExportRequest.getMetricType())
                 .numberOfRecords(numberOfRecords)
+                .filename(filename)
                 .build();
         metricExport.setUrl(pulceoLBEndpoint + "/api/v1/metric-exports/" + metricExport.getUuid() + "/blobs/" + filename);
         MetricExport savedMetricExport = this.metricExportRepository.save(metricExport);
@@ -182,6 +189,10 @@ public class MetricsQueryService {
         List<MetricExport> metricExportList = new ArrayList<>();
         this.metricExportRepository.findAll().forEach(metricExportList::add);
         return metricExportList;
+    }
+
+    public Optional<MetricExport> readMetricExportByUuid(UUID metricExportUUID) {
+        return this.metricExportRepository.findByUuid(metricExportUUID);
     }
 
     private void getMeasurementAsCSV(MetricType measurement, String filename) throws InterruptedException, IOException, MetricsQueryServiceException {
@@ -215,7 +226,6 @@ public class MetricsQueryService {
         for (FluxTable table : tables) {
             List<FluxRecord> records = table.getRecords();
             for (FluxRecord record : records) {
-                logger.info("Measurement {} count: {}", measurement, record.getValueByKey("_value"));
                 try {
                     return Long.parseLong(Objects.requireNonNull(record.getValueByKey("_value")).toString());
                 } catch (NumberFormatException e) {

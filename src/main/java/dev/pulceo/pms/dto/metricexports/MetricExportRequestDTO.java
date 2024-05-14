@@ -1,7 +1,7 @@
 package dev.pulceo.pms.dto.metricexports;
 
 import dev.pulceo.pms.model.metric.MetricType;
-import dev.pulceo.pms.model.metricexports.MetricExportRequest;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -11,12 +11,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public class MetricExportRequestDTO {
 
+    @NotNull
     private MetricType metricType;
-
-    public static MetricExportRequestDTO fromMetricExportRequestDTO(MetricExportRequest metricExportRequest) {
-        return MetricExportRequestDTO.builder()
-                .metricType(metricExportRequest.getMetricType())
-                .build();
-    }
 
 }

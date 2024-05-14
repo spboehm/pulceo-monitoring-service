@@ -38,7 +38,7 @@ public class MetricsQueryServiceTest {
     MetricsQueryService metricsQueryService;
 
     @BeforeAll
-    static void setupClass() throws InterruptedException, IOException {
+    static void setupClass() {
         try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org)) {
             // delete bucket
             BucketsApi bucketsApi = influxDBClient.getBucketsApi();

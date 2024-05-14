@@ -25,10 +25,7 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -189,7 +186,7 @@ public class MetricsQueryService {
             });
             countDownLatch.await(); // wait for influxdb thread to finish
             logger.info("{} successfully written", filename);
-        };
+        }
     }
 
     private long getNumberOfRecords(MetricType measurement) throws MetricsQueryServiceException {
@@ -200,7 +197,11 @@ public class MetricsQueryService {
             List<FluxRecord> records = table.getRecords();
             for (FluxRecord record : records) {
                 logger.info("Measurement {} count: {}", measurement, record.getValueByKey("_value"));
-                return Long.parseLong(record.getValueByKey("_value").toString());
+                try {
+                    return Long.parseLong(Objects.requireNonNull(record.getValueByKey("_value")).toString());
+                } catch (NumberFormatException e) {
+                    throw new MetricsQueryServiceException("Could not parse measurement count", e);
+                }
             }
         }
         throw new MetricsQueryServiceException("Measurement %s not found!".formatted(measurement));

@@ -75,7 +75,7 @@ public class MetricsQueryServiceTest {
     private static void writeCSVFileToInfluxDB(File file) throws IOException, InterruptedException {
         Process influxWriteCMDProcess = null;
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", String.format("INFLUX_ORG=org INFLUX_TOKEN=token /usr/local/bin/influx write --bucket %s --file %s", bucket, file.getAbsolutePath()));
+            ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", String.format("INFLUX_ORG=org INFLUX_TOKEN=token /usr/local/bin/influx write --bucket %s --format csv --file %s", bucket, file.getAbsolutePath()));
             processBuilder.inheritIO();
             influxWriteCMDProcess = processBuilder.start();
             influxWriteCMDProcess.waitFor(5, TimeUnit.SECONDS);

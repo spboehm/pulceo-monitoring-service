@@ -38,7 +38,8 @@ public class InfluxQueryBuilder {
         return "from(bucket: \"" + bucket + "\")\n" +
                 " |> range(start: 0)\n" +
                 " |> filter(fn: (r) => r[\"_measurement\"] == \"CPU_UTIL\") |> filter(fn: (r) => r[\"_field\"] == \"usageNanoCores\" or r[\"_field\"] == \"usageCoreNanoSeconds\" or r[\"_field\"] == \"usageCPUPercentage\")\n" +
-                " |> toFloat()";
+                " |> toFloat()\n" +
+                " |> drop(columns:[\"_start\",\"_stop\", \"_time\"])";
     }
 
     // TODO: MEM_UTIL

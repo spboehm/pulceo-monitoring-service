@@ -87,9 +87,10 @@ public class MetricsQueryService {
 
     private void waitForMetricExports() {
         while (atomicBoolean.get()) {
+            long metricExportId = -1;
             try {
                 logger.info("MetricsQueryService is listening for metric exports requests...");
-                long metricExportId = metricExportQueue.take();
+                metricExportId = metricExportQueue.take();
                 logger.info("MetricsQueryService received metric export request with id {}", metricExportId);
                 if (metricExportId == -1) {
                     logger.info("MetricsQueryService received termination signal by poison pill...shutdown initiated");
@@ -102,15 +103,24 @@ public class MetricsQueryService {
             } catch (InterruptedException e) {
                 logger.info("MetricsQueryService was interrupted while waiting for metric exports");
                 this.atomicBoolean.set(false);
+                this.markMetricExportAsFailed(metricExportId);
             } catch (MetricsQueryServiceException e) {
                 logger.error("Could not get measurements as CSV", e);
+                this.markMetricExportAsFailed(metricExportId);
             } catch (IOException e) {
                 logger.error("Could not write measurements as CSV", e);
+                this.markMetricExportAsFailed(metricExportId);
             } catch (NoSuchElementException e) {
                 logger.error("Could not find metric export request", e);
             }
         }
         logger.info("MetricsQueryService successfully stopped!");
+    }
+
+    private void markMetricExportAsFailed(long metricExportId) {
+        MetricExport metricExport = this.metricExportRepository.findById(metricExportId).orElseThrow();
+        metricExport.setMetricExportState(MetricExportState.FAILED);
+        this.metricExportRepository.save(metricExport);
     }
 
     public List<ShortNodeLinkMetricDTO> queryRangeNodeLinkMetrics(String metricType, String aggregation) throws MetricsQueryServiceException {

@@ -1,53 +1,41 @@
 package dev.pulceo.pms.service;
 
-import com.influxdb.client.*;
+import com.influxdb.client.BucketsApi;
+import com.influxdb.client.InfluxDBClient;
+import com.influxdb.client.InfluxDBClientFactory;
+import com.influxdb.client.OrganizationsApi;
 import com.influxdb.client.domain.Bucket;
-import com.influxdb.client.domain.WriteConsistency;
-import com.influxdb.client.domain.WritePrecision;
-import com.influxdb.client.write.Point;
-import com.influxdb.client.write.WriteParameters;
-import com.influxdb.query.FluxRecord;
-import com.influxdb.query.FluxTable;
-import dev.pulceo.pms.dto.metrics.ShortNodeLinkMetricDTO;
 import dev.pulceo.pms.exception.MetricsQueryServiceException;
 import dev.pulceo.pms.model.metric.MetricType;
 import dev.pulceo.pms.model.metricexports.MetricExport;
 import dev.pulceo.pms.model.metricexports.MetricExportRequest;
 import dev.pulceo.pms.model.metricexports.MetricExportState;
-import dev.pulceo.pms.util.InfluxQueryBuilder;
-import org.codehaus.groovy.transform.SourceURIASTTransformation;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import javax.xml.crypto.Data;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.sql.Timestamp;
-import java.time.OffsetDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest
 public class MetricsQueryServiceTest {
 
+    private final static Logger logger = Logger.getLogger(MetricsQueryServiceTest.class.getName());
+
     private final static String influxDBHost= "http://localhost:8086";
     private final static String token = "token";
     private final static String org = "org";
     private final static String bucket = "test-bucket";
     private final static String influxDBUrl = influxDBHost + "?readTimeout=30000&writeTimeout=30000&connectTimeout=30000";
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(MetricsQueryServiceTest.class);
 
     @Autowired
     MetricsQueryService metricsQueryService;
@@ -75,7 +63,7 @@ public class MetricsQueryServiceTest {
 
     @Test
     @Disabled
-    public void testGetMeasurementAsCSV() throws InterruptedException, IOException, MetricsQueryServiceException {
+    public void testGetMeasurementAsCSV() throws MetricsQueryServiceException {
         // given
         MetricExportRequest metricExportRequest = MetricExportRequest
                 .builder()
@@ -110,6 +98,7 @@ public class MetricsQueryServiceTest {
             }
         } else {
             // do nothing
+            logger.info("Process already closed, nothing to close");
         }
     }
 

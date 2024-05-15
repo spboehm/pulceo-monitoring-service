@@ -201,7 +201,6 @@ public class MetricsQueryService {
     private void getMeasurementAsCSV(MetricType measurement, String filename) throws InterruptedException, IOException, MetricsQueryServiceException {
         QueryApi queryApi = influxDBClient.getQueryApi();
         String influxQuery = InfluxQueryBuilder.queryUtilMetrics(bucket, measurement.toString());
-        System.out.println(influxQuery);
         long numberOfMeasurements = this.getNumberOfRecords(measurement);
         CountDownLatch countDownLatch = new CountDownLatch(1); // influxdb thread
         AtomicLong count = new AtomicLong(0);

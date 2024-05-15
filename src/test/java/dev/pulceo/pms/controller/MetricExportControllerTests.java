@@ -47,15 +47,13 @@ public class MetricExportControllerTests {
     }
 
     @ParameterizedTest
-    @EnumSource(value = MetricType.class, names = {"CPU_UTIL", "MEM_UTIL"})
+    @EnumSource(value = MetricType.class, names = {"CPU_UTIL", "MEM_UTIL", "STORAGE_UTIL", "NET_UTIL", "ICMP_RTT", "TCP_BW", "UDP_BW"})
     public void testCreateMetricExportRequests(MetricType metricType) throws Exception {
         // given
-        System.out.println(metricType);
         InfluxDBUtil.loadMetricsIntoInfluxSampleDB(metricType);
         MetricExportRequestDTO metricExportRequestDTO = MetricExportRequestDTO.builder()
                 .metricType(metricType)
                 .build();
-        System.out.println(metricExportRequestDTO);
         // when and then
         MvcResult mvcResult = this.mockMvc.perform(post("/api/v1/metric-exports")
                 .contentType("application/json")

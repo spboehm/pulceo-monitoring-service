@@ -63,19 +63,19 @@ public class InfluxDBUtil {
                 writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/mem_util.csv");
                 break;
             case STORAGE_UTIL:
-                // do nothing
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/storage_util.csv");
                 break;
             case NET_UTIL:
-                // do nothing
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/net_util.csv");
                 break;
             case ICMP_RTT:
-                // do nothing
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/icmp_rtt.csv");
                 break;
             case TCP_BW:
-                // do nothing
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/tcp_bw.csv");
                 break;
             case UDP_BW:
-                // do nothing
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/udp_bw.csv");
                 break;
             default:
                 throw new IllegalArgumentException("Invalid metric type");

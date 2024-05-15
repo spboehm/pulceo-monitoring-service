@@ -43,6 +43,13 @@ public class InfluxQueryBuilder {
     }
 
     // TODO: MEM_UTIL
+    public static String queryUtilMetrics(String bucket, String measurement) {
+        return "from(bucket: \"" + bucket + "\")\n" +
+                " |> range(start: 0)\n" +
+                " |> filter(fn: (r) => r[\"_measurement\"] == \"" + measurement + "\")\n" +
+                " |> toFloat()\n" +
+                " |> drop(columns:[\"_start\",\"_stop\", \"_time\"])";
+    }
 
     // TODO: NET_UTIL
 

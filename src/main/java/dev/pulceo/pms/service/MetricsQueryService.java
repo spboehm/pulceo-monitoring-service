@@ -82,6 +82,7 @@ public class MetricsQueryService {
 
     @PreDestroy
     private void preDestroy() throws InterruptedException {
+        this.logger.info("MetricsQueryService is shutting down...");
         this.atomicBoolean.set(false);
         this.metricExportQueue.put(-1L);
         this.threadPoolTaskExecutor.shutdown();
@@ -96,7 +97,7 @@ public class MetricsQueryService {
                 logger.info("MetricsQueryService is listening for metric exports requests...");
                 metricExportId = metricExportQueue.take();
                 logger.info("MetricsQueryService received metric export request with id {}", metricExportId);
-                if (metricExportId == -1) {
+                if (metricExportId == -1L) {
                     logger.info("MetricsQueryService received termination signal by poison pill...shutdown initiated");
                     return;
                 }
@@ -199,7 +200,8 @@ public class MetricsQueryService {
 
     private void getMeasurementAsCSV(MetricType measurement, String filename) throws InterruptedException, IOException, MetricsQueryServiceException {
         QueryApi queryApi = influxDBClient.getQueryApi();
-        String influxQuery = InfluxQueryBuilder.queryCPUUtil(bucket);
+        String influxQuery = InfluxQueryBuilder.queryUtilMetrics(bucket, measurement.toString());
+        System.out.println(influxQuery);
         long numberOfMeasurements = this.getNumberOfRecords(measurement);
         CountDownLatch countDownLatch = new CountDownLatch(1); // influxdb thread
         AtomicLong count = new AtomicLong(0);

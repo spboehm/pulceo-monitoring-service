@@ -5,6 +5,7 @@ import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
 import com.influxdb.client.OrganizationsApi;
 import com.influxdb.client.domain.Bucket;
+import dev.pulceo.pms.model.metric.MetricType;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,8 +54,36 @@ public class InfluxDBUtil {
         }
     }
 
-    public static void provideInfluxCPUUtilMetrics() throws IOException, InterruptedException {
-        writeCSVFileToInfluxDB(new File("src/test/resources/metricexports/cpu_util.csv"));
+    public static void loadMetricsIntoInfluxSampleDB(MetricType metricType) throws IOException, InterruptedException {
+        switch (metricType) {
+            case CPU_UTIL:
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/cpu_util.csv");
+                break;
+            case MEM_UTIL:
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/mem_util.csv");
+                break;
+            case STORAGE_UTIL:
+                // do nothing
+                break;
+            case NET_UTIL:
+                // do nothing
+                break;
+            case ICMP_RTT:
+                // do nothing
+                break;
+            case TCP_BW:
+                // do nothing
+                break;
+            case UDP_BW:
+                // do nothing
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid metric type");
+        }
+    }
+
+    private static void writeMetricsIntoInfluxSampleDB(String pathname) throws IOException, InterruptedException {
+        writeCSVFileToInfluxDB(new File(pathname));
     }
 
     private static void closeProcess(Process process) throws IOException {

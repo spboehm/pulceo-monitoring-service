@@ -8,7 +8,8 @@ import dev.pulceo.pms.repository.MetricRequestRepository;
 import dev.pulceo.pms.util.InfluxDBUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -45,27 +46,29 @@ public class MetricExportControllerTests {
         InfluxDBUtil.initInfluxDBTestEnvironment();
     }
 
-    @Test
-    public void testCreateMetricExportRequestForCPUUtil() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = MetricType.class, names = {"CPU_UTIL", "MEM_UTIL"})
+    public void testCreateMetricExportRequests(MetricType metricType) throws Exception {
         // given
-        InfluxDBUtil.provideInfluxCPUUtilMetrics();
+        System.out.println(metricType);
+        InfluxDBUtil.loadMetricsIntoInfluxSampleDB(metricType);
         MetricExportRequestDTO metricExportRequestDTO = MetricExportRequestDTO.builder()
-                .metricType(MetricType.CPU_UTIL)
+                .metricType(metricType)
                 .build();
-
+        System.out.println(metricExportRequestDTO);
         // when and then
         MvcResult mvcResult = this.mockMvc.perform(post("/api/v1/metric-exports")
                 .contentType("application/json")
                 .content(objectMapper.writeValueAsString(metricExportRequestDTO)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.metricType").value("CPU_UTIL"))
+                .andExpect(jsonPath("$.metricType").value(metricType.toString()))
                 .andExpect(jsonPath("$.numberOfRecords").value(100))
                 .andExpect(jsonPath("$.metricExportState").value("PENDING"))
                 .andReturn();
 
         UUID metricExportUUID = UUID.fromString(objectMapper.readTree(mvcResult.getResponse().getContentAsString()).get("metricExportUUID").asText());
 
-        // then
+        // further verify that the metric export state is COMPLETED
         boolean metricExportStateIsPending = true;
         while(metricExportStateIsPending) {
             MvcResult subsequentMvcResult = this.mockMvc.perform(get("/api/v1/metric-exports/" + metricExportUUID)

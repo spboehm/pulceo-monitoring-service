@@ -34,15 +34,6 @@ public class InfluxQueryBuilder {
                 "  |> count()";
     }
 
-    public static String queryCPUUtil(String bucket) {
-        return "from(bucket: \"" + bucket + "\")\n" +
-                " |> range(start: 0)\n" +
-                " |> filter(fn: (r) => r[\"_measurement\"] == \"CPU_UTIL\") |> filter(fn: (r) => r[\"_field\"] == \"usageNanoCores\" or r[\"_field\"] == \"usageCoreNanoSeconds\" or r[\"_field\"] == \"usageCPUPercentage\")\n" +
-                " |> toFloat()\n" +
-                " |> drop(columns:[\"_start\",\"_stop\", \"_time\"])";
-    }
-
-    // TODO: MEM_UTIL
     public static String queryUtilMetrics(String bucket, String measurement) {
         return "from(bucket: \"" + bucket + "\")\n" +
                 " |> range(start: 0)\n" +
@@ -50,16 +41,6 @@ public class InfluxQueryBuilder {
                 " |> toFloat()\n" +
                 " |> drop(columns:[\"_start\",\"_stop\", \"_time\"])";
     }
-
-    // TODO: NET_UTIL
-
-    // TODO: STORAGE_UTIL
-
-    // TODO: ICMP_RTT
-
-    // TODO: TCP_BW
-
-    // TODO: UDP_BW
 
     // TODO: EVENTS
 

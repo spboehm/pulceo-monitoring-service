@@ -77,7 +77,7 @@ public class MetricsQueryService {
     @PostConstruct
     private void postConstruct() {
         this.influxDBClient = InfluxDBClientFactory.create(influxDBUrl + "?readTimeout=" + readTimeout, token.toCharArray(), org);
-        this.threadPoolTaskExecutor.submit(this::waitForMetricExports);
+        this.threadPoolTaskExecutor.submit(this::waitForMetricExportRequests);
     }
 
     @PreDestroy
@@ -88,9 +88,10 @@ public class MetricsQueryService {
         this.influxDBClient.close();
     }
 
-    private void waitForMetricExports() {
+    // TODO: refactor to another class
+    private void waitForMetricExportRequests() {
         while (atomicBoolean.get()) {
-            long metricExportId = -1;
+            long metricExportId = -1L;
             try {
                 logger.info("MetricsQueryService is listening for metric exports requests...");
                 metricExportId = metricExportQueue.take();
@@ -99,6 +100,7 @@ public class MetricsQueryService {
                     logger.info("MetricsQueryService received termination signal by poison pill...shutdown initiated");
                     return;
                 }
+                // TODO: remove redundant queries
                 MetricExport pendingMetricExport = metricExportRepository.findById(metricExportId).orElseThrow();
                 pendingMetricExport.setMetricExportState(MetricExportState.RUNNING);
                 this.metricExportRepository.save(pendingMetricExport);

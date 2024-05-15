@@ -38,7 +38,6 @@ public class MetricExportController {
 
     @PostMapping("")
     public ResponseEntity<MetricExportDTO> createMetricExport(@RequestBody @Valid MetricExportRequestDTO metricExportRequestDTO) throws MetricsQueryServiceException {
-        System.out.println("Received request to createssss a new metric export");
         this.logger.info("Received request to create a new metric export");
         MetricExport metricExport = this.metricsQueryService.createMetricExport(MetricExportRequest.fromMetricExportRequestDTO(metricExportRequestDTO));
         return ResponseEntity.status(201).body(MetricExportDTO.fromMetricExportDTO(metricExport));
@@ -52,6 +51,15 @@ public class MetricExportController {
             metricExportDTOs.add(MetricExportDTO.fromMetricExportDTO(metricExport));
         }
         return ResponseEntity.status(200).body(metricExportDTOs);
+    }
+
+    @GetMapping("/{metricExportUuid}")
+    public ResponseEntity<MetricExportDTO> readMetricExportById(@PathVariable UUID metricExportUuid) throws MetricsQueryServiceException {
+        Optional<MetricExport> metricExport = this.metricsQueryService.readMetricExportByUuid(metricExportUuid);
+        if (metricExport.isEmpty()) {
+            throw new MetricsQueryServiceException("Metric export not found");
+        }
+        return ResponseEntity.status(200).body(MetricExportDTO.fromMetricExportDTO(metricExport.get()));
     }
 
     @GetMapping(value = "/{metricExportUuid}/blobs/{filename}")

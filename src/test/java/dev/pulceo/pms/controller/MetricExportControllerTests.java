@@ -1,5 +1,6 @@
 package dev.pulceo.pms.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pulceo.pms.dto.metricexports.MetricExportRequestDTO;
 import dev.pulceo.pms.model.metric.MetricType;
@@ -14,7 +15,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,20 +47,41 @@ public class MetricExportControllerTests {
 
     @Test
     public void testCreateMetricExportRequestForCPUUtil() throws Exception {
-
         // given
         InfluxDBUtil.provideInfluxCPUUtilMetrics();
         MetricExportRequestDTO metricExportRequestDTO = MetricExportRequestDTO.builder()
                 .metricType(MetricType.CPU_UTIL)
                 .build();
 
-        // when
+        // when and then
         MvcResult mvcResult = this.mockMvc.perform(post("/api/v1/metric-exports")
                 .contentType("application/json")
                 .content(objectMapper.writeValueAsString(metricExportRequestDTO)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.metricType").value("CPU_UTIL"))
+                .andExpect(jsonPath("$.numberOfRecords").value(100))
+                .andExpect(jsonPath("$.metricExportState").value("PENDING"))
                 .andReturn();
 
+        UUID metricExportUUID = UUID.fromString(objectMapper.readTree(mvcResult.getResponse().getContentAsString()).get("metricExportUUID").asText());
+
         // then
-        System.out.println(mvcResult.getResponse().getContentAsString());
+        boolean metricExportStateIsPending = true;
+        while(metricExportStateIsPending) {
+            MvcResult subsequentMvcResult = this.mockMvc.perform(get("/api/v1/metric-exports/" + metricExportUUID)
+                    .contentType("application/json"))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            JsonNode jsonNode = objectMapper.readTree(subsequentMvcResult.getResponse().getContentAsString());
+
+            if (!jsonNode.get("metricExportState").asText().equals("COMPLETED")) {
+                Thread.sleep(500);
+            } else {
+                assertEquals("COMPLETED", jsonNode.get("metricExportState").asText());
+                metricExportStateIsPending = false;
+            }
+        }
     }
+
 }

@@ -9,7 +9,8 @@ import dev.pulceo.pms.util.InfluxDBUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -47,8 +49,8 @@ public class MetricExportControllerTests {
     }
 
     @ParameterizedTest
-    @EnumSource(value = MetricType.class, names = {"CPU_UTIL", "MEM_UTIL", "STORAGE_UTIL", "NET_UTIL", "ICMP_RTT", "TCP_BW", "UDP_BW"})
-    public void testCreateMetricExportRequests(MetricType metricType) throws Exception {
+    @MethodSource("metricExportRequestTestData")
+    public void testCreateMetricExportRequests(MetricType metricType, int expectedNumberOfRecords) throws Exception {
         // given
         InfluxDBUtil.loadMetricsIntoInfluxSampleDB(metricType);
         MetricExportRequestDTO metricExportRequestDTO = MetricExportRequestDTO.builder()
@@ -60,7 +62,7 @@ public class MetricExportControllerTests {
                 .content(objectMapper.writeValueAsString(metricExportRequestDTO)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.metricType").value(metricType.toString()))
-                .andExpect(jsonPath("$.numberOfRecords").value(100))
+                .andExpect(jsonPath("$.numberOfRecords").value(expectedNumberOfRecords))
                 .andExpect(jsonPath("$.metricExportState").value("PENDING"))
                 .andReturn();
 
@@ -83,6 +85,20 @@ public class MetricExportControllerTests {
                 metricExportStateIsPending = false;
             }
         }
+    }
+
+    private static Stream<Arguments> metricExportRequestTestData() {
+        return Stream.of(
+                Arguments.of(MetricType.CPU_UTIL, 100),
+                Arguments.of(MetricType.MEM_UTIL, 100),
+                Arguments.of(MetricType.STORAGE_UTIL, 100),
+                Arguments.of(MetricType.NET_UTIL, 100),
+                Arguments.of(MetricType.ICMP_RTT, 100),
+                Arguments.of(MetricType.TCP_BW,100),
+                Arguments.of(MetricType.UDP_BW, 100),
+                Arguments.of(MetricType.REQUEST, 100),
+                Arguments.of(MetricType.EVENT, 46)
+        );
     }
 
 }

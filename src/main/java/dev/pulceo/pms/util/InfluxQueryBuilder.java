@@ -42,8 +42,11 @@ public class InfluxQueryBuilder {
                 " |> drop(columns:[\"_start\",\"_stop\", \"_time\"])";
     }
 
-    // TODO: EVENTS
-
-    // TODO: REQUESTS
+    public static String queryEvents(String bucket) {
+        return "from(bucket: \"" + bucket + "\")\n" +
+                " |> range(start: 0)\n" +
+                " |> filter(fn: (r) => r[\"_measurement\"] == \"EVENT\")\n" +
+                " |> drop(columns:[\"_start\",\"_stop\", \"_time\"])";
+    }
 
 }

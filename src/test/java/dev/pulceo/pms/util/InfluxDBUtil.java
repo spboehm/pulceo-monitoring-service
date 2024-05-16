@@ -77,6 +77,12 @@ public class InfluxDBUtil {
             case UDP_BW:
                 writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/udp_bw.csv");
                 break;
+            case REQUEST:
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/requests.csv");
+                break;
+            case EVENT:
+                writeMetricsIntoInfluxSampleDB("src/test/resources/metricexports/events.csv");
+                break;
             default:
                 throw new IllegalArgumentException("Invalid metric type");
         }

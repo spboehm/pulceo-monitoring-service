@@ -203,7 +203,7 @@ public class MetricsQueryService {
 
     private void getMeasurementAsCSV(MetricType measurement, String filename) throws InterruptedException, IOException, MetricsQueryServiceException {
         QueryApi queryApi = influxDBClient.getQueryApi();
-        String influxQuery = InfluxQueryBuilder.queryUtilMetrics(bucket, measurement.toString());
+        String influxQuery = resolveInfluxQuery(measurement);
         long numberOfMeasurements = this.getNumberOfRecords(measurement);
         CountDownLatch countDownLatch = new CountDownLatch(1); // influxdb thread
         AtomicLong count = new AtomicLong(0);
@@ -223,6 +223,14 @@ public class MetricsQueryService {
             });
             countDownLatch.await(); // wait for influxdb thread to finish
             logger.info("{} successfully written", filename);
+        }
+    }
+
+    private String resolveInfluxQuery(MetricType measurement) {
+        if (measurement == MetricType.EVENT) {
+            return InfluxQueryBuilder.queryEvents(bucket);
+        } else {
+            return InfluxQueryBuilder.queryUtilMetrics(bucket, measurement.toString());
         }
     }
 

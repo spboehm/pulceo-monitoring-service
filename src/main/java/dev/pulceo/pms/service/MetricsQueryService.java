@@ -77,8 +77,9 @@ public class MetricsQueryService {
     }
 
     @PostConstruct
-    private void postConstruct() {
+    private void postConstruct() throws MetricsQueryServiceException {
         this.influxDBClient = InfluxDBClientFactory.create(influxDBUrl + "?readTimeout=" + readTimeout, token.toCharArray(), org);
+        createPmsDataDirIfNotExists();
         this.threadPoolTaskExecutor.submit(this::waitForMetricExportRequests);
     }
 
@@ -206,7 +207,7 @@ public class MetricsQueryService {
         long numberOfMeasurements = this.getNumberOfRecords(measurement);
         CountDownLatch countDownLatch = new CountDownLatch(1); // influxdb thread
         AtomicLong count = new AtomicLong(0);
-        Files.createDirectories(Path.of(this.pmsDatDir));
+        // pms data dir created during initialization
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(this.pmsDatDir + "/" + filename, true))) {
             queryApi.queryRaw(influxQuery, (cancellable, line) -> {
                 try {
@@ -222,6 +223,15 @@ public class MetricsQueryService {
             });
             countDownLatch.await(); // wait for influxdb thread to finish
             logger.info("{} successfully written", filename);
+        }
+    }
+
+    private void createPmsDataDirIfNotExists() throws MetricsQueryServiceException {
+        try {
+            Files.createDirectories(Path.of(this.pmsDatDir));
+        } catch (IOException e) {
+            logger.error("Could not create PMS data directory", e);
+            throw new MetricsQueryServiceException("Could not create PMS data directory", e);
         }
     }
 

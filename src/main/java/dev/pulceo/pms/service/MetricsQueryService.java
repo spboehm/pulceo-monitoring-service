@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -204,6 +206,7 @@ public class MetricsQueryService {
         long numberOfMeasurements = this.getNumberOfRecords(measurement);
         CountDownLatch countDownLatch = new CountDownLatch(1); // influxdb thread
         AtomicLong count = new AtomicLong(0);
+        Files.createDirectories(Path.of(this.pmsDatDir));
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(this.pmsDatDir + "/" + filename, true))) {
             queryApi.queryRaw(influxQuery, (cancellable, line) -> {
                 try {

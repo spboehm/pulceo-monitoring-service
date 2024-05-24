@@ -1,7 +1,6 @@
 package dev.pulceo.pms.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.InfluxDBClient;
@@ -41,6 +40,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class InfluxDBService {
 
     private final Logger logger = LoggerFactory.getLogger(InfluxDBService.class);
+
+    @Value("${orchestration.id}")
+    private String orchestrationId;
+
+    @Value("${orchestration.name}")
+    private String orchestrationName;
 
     @Value("${influxdb.token}")
     private String token;

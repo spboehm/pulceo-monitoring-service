@@ -14,7 +14,7 @@ public class InfluxQueryBuilder {
         return  "from(bucket: \"" + bucket + "\")\n" +
                 "  |> range(start: 0)\n" +
                 "  |> filter(fn: (r) => r[\"_measurement\"] == \"" + measurement + "\" and r[\"_field\"] == \"" + field + "\")\n" +
-                "  |> group(columns: [])\n" +
+                "  |> group(columns: [\"jobUUID\"])\n" +
                 "  |> " + aggregation + "\n";
     }
 
@@ -22,7 +22,7 @@ public class InfluxQueryBuilder {
         return  "from(bucket: \"" + bucket + "\")\n" +
                 "  |> range(start: 0)\n" +
                 "  |> filter(fn: (r) => r[\"_measurement\"] == \"" + measurement + "\" and r[\"_field\"] == \"" + field + "\" and r[\"iperfRole\"] == \"" + iperfRole + "\")\n" +
-                "  |> group(columns: [])\n" +
+                "  |> group(columns: [\"jobUUID\"])\n" +
                 "  |> " + aggregation + "\n";
     }
 

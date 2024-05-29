@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -37,6 +38,33 @@ public class MetricsQueryController {
             default:
                 if (aggregation.startsWith("limit")) {
                     shortNodeLinkMetricDTO = metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation);
+                    break;
+                } else {
+                    throw new MetricsQueryServiceException("Invalid aggregation type");
+                }
+        }
+        return ResponseEntity.status(200).body(shortNodeLinkMetricDTO);
+    }
+
+    @GetMapping("/api/v1/metrics")
+    public ResponseEntity<List<ShortNodeLinkMetricDTO>> getMetrics(@RequestParam(defaultValue = "link") String type, @RequestParam(defaultValue = "limit(n:1)") String aggregation) throws MetricsQueryServiceException {
+        List<ShortNodeLinkMetricDTO> shortNodeLinkMetricDTO = new ArrayList<>();
+        switch (aggregation) {
+            case "min", "max":
+                for (String measurement : List.of("ICMP_RTT", "TCP_BW", "UDP_BW")) {
+                   shortNodeLinkMetricDTO.addAll(metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation + "()"));
+                }
+                break;
+            case "mean", "median":
+                for (String measurement : List.of("ICMP_RTT", "TCP_BW", "UDP_BW")) {
+                    shortNodeLinkMetricDTO.addAll(metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation));
+                }
+                break;
+            default:
+                if (aggregation.startsWith("limit")) {
+                    for (String measurement : List.of("ICMP_RTT", "TCP_BW", "UDP_BW")) {
+                        shortNodeLinkMetricDTO.addAll(metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation));
+                    }
                     break;
                 } else {
                     throw new MetricsQueryServiceException("Invalid aggregation type");

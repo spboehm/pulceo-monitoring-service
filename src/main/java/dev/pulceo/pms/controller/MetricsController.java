@@ -6,11 +6,11 @@ import dev.pulceo.pms.exception.MetricsServiceException;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.service.MetricsService;
-import jakarta.websocket.server.PathParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.*;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -27,6 +27,7 @@ public class MetricsController {
         this.metricsService = metricsService;
     }
 
+    // TODO: remove
     @MessageMapping("/register")
     @SendTo("/metrics")
     public String greeting(Object message) throws Exception {

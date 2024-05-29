@@ -71,6 +71,8 @@ public class InfluxDBService {
 
     private final SimpMessagingTemplate simpMessagingTemplate;
 
+    private final SimpMessageHandler simpMessageHandler;
+
     private final ConcurrentHashMap<UUID, MetricRequest> metricRequests = new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -80,7 +82,14 @@ public class InfluxDBService {
     private final NodeLinkMetricRepository nodeLinkMetricRepository;
 
     @Autowired
-    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent, BlockingQueue<Message<?>> mqttBlockingQueueRequest) {
+    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue,
+                           ThreadPoolTaskExecutor threadPoolTaskExecutor,
+                           SimpMessagingTemplate simpMessagingTemplate,
+                           NodeLinkMetricRepository nodeLinkMetricRepository,
+                           NodeMetricRepository nodeMetricRepository,
+                           BlockingQueue<Message<?>> mqttBlockingQueueEvent,
+                           BlockingQueue<Message<?>> mqttBlockingQueueRequest,
+                           SimpMessageHandler simpMessageHandler) {
         this.mqttBlockingQueue = mqttBlockingQueue;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
         this.simpMessagingTemplate = simpMessagingTemplate;
@@ -88,6 +97,7 @@ public class InfluxDBService {
         this.nodeMetricRepository = nodeMetricRepository;
         this.mqttBlockingQueueEvent = mqttBlockingQueueEvent;
         this.mqttBlockingQueueRequest = mqttBlockingQueueRequest;
+        this.simpMessageHandler = simpMessageHandler;
     }
 
     @PostConstruct
@@ -328,9 +338,16 @@ public class InfluxDBService {
                     this.atomicBoolean.set(false);
                 } catch (JsonProcessingException e) {
                     logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
+                } catch (Exception e) {
+                    logger.error("An error occurred while processing metric: " + e.getMessage());
                 }
             }
         }
+    }
+
+    private String resolveDeviceIdByPNAUUID(String pnaUUID) {
+        logger.debug("Resolving device ID by PNA UUID: " + pnaUUID);
+        return "fog1";
     }
 
     public void notifyAboutNewMetricRequest(MetricRequest metricRequest) {

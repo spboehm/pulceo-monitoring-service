@@ -12,7 +12,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // outgoing
-        config.enableSimpleBroker("/metrics");
+        config.enableSimpleBroker("/orchestrations");
+
+        // TODO: remove, not necessary anymore
         // incoming
         config.setApplicationDestinationPrefixes("/pms");
     }
@@ -20,6 +22,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // TODO: configure AllowedOrigins properly
+        // where the websocket connection is finally established
         registry.addEndpoint("/ws").setAllowedOrigins("*");
     }
 }

@@ -51,14 +51,8 @@ public class MetricsQueryController {
         List<ShortNodeLinkMetricDTO> shortNodeLinkMetricDTO = new ArrayList<>();
         switch (aggregation) {
             case "min", "max":
-                for (String measurement : List.of("ICMP_RTT", "TCP_BW", "UDP_BW")) {
-                   shortNodeLinkMetricDTO.addAll(metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation + "()"));
-                }
                 break;
             case "mean", "median":
-                for (String measurement : List.of("ICMP_RTT", "TCP_BW", "UDP_BW")) {
-                    shortNodeLinkMetricDTO.addAll(metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation));
-                }
                 break;
             default:
                 if (aggregation.startsWith("limit")) {

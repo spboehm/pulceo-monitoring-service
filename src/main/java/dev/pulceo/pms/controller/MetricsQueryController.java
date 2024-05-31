@@ -47,7 +47,7 @@ public class MetricsQueryController {
     }
 
     @GetMapping("/api/v1/metrics")
-    public ResponseEntity<List<ShortNodeLinkMetricDTO>> getMetrics(@RequestParam(defaultValue = "link") String type, @RequestParam(defaultValue = "limit(n:1)") String aggregation) throws MetricsQueryServiceException {
+    public ResponseEntity<List<ShortNodeLinkMetricDTO>> getMetrics(@RequestParam(defaultValue = "link") String type, @RequestParam(defaultValue = "last") String aggregation) throws MetricsQueryServiceException {
         List<ShortNodeLinkMetricDTO> shortNodeLinkMetricDTO = new ArrayList<>();
         switch (aggregation) {
             case "min", "max":
@@ -55,9 +55,9 @@ public class MetricsQueryController {
             case "mean", "median":
                 break;
             default:
-                if (aggregation.startsWith("limit")) {
+                if (aggregation.startsWith("last")) {
                     for (String measurement : List.of("ICMP_RTT", "TCP_BW", "UDP_BW")) {
-                        shortNodeLinkMetricDTO.addAll(metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation));
+                        shortNodeLinkMetricDTO.addAll(metricsQueryService.queryRangeNodeLinkMetrics(measurement, aggregation  + "()" ));
                     }
                     break;
                 } else {

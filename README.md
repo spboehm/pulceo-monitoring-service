@@ -88,3 +88,17 @@ Date: Sat, 02 Mar 2024 16:12:17 GMT
 ```bash
 kubectl delete -f pms-deployment.yaml
 ```
+
+### Preparations
+
+- Install [Docker](https://www.docker.com/) on your machine by following the official installation guide
+- Run a local MQTT broker ([Eclipse Mosquitto](https://mosquitto.org/)) on your system via [Docker Compose](https://docs.docker.com/compose/)
+- Run a local redis server ([Redis](https://redis.io/)) via [Docker Compose](https://docs.docker.com/compose/)
+
+```bash
+docker-compose -f influxdb/docker-compose.yml up -d 
+```
+
+- Run a local test cluster with k3d
+```bash
+k3d cluster create pulceo-test --api-port 40476 --port 80:80@loadbalancer

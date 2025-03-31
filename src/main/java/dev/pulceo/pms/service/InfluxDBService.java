@@ -1,7 +1,6 @@
 package dev.pulceo.pms.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.InfluxDBClient;
@@ -60,6 +59,8 @@ public class InfluxDBService {
 
     private final BlockingQueue<Message<?>> mqttBlockingQueueRequest;
 
+    private final BlockingQueue<Message<?>> mqttBlockingQueueTask;
+
     private final AtomicBoolean atomicBoolean = new AtomicBoolean(true);
 
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -75,7 +76,7 @@ public class InfluxDBService {
     private final NodeLinkMetricRepository nodeLinkMetricRepository;
 
     @Autowired
-    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent, BlockingQueue<Message<?>> mqttBlockingQueueRequest) {
+    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent, BlockingQueue<Message<?>> mqttBlockingQueueRequest, BlockingQueue<Message<?>> mqttBlockingQueueTask) {
         this.mqttBlockingQueue = mqttBlockingQueue;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
         this.simpMessagingTemplate = simpMessagingTemplate;
@@ -83,6 +84,7 @@ public class InfluxDBService {
         this.nodeMetricRepository = nodeMetricRepository;
         this.mqttBlockingQueueEvent = mqttBlockingQueueEvent;
         this.mqttBlockingQueueRequest = mqttBlockingQueueRequest;
+        this.mqttBlockingQueueTask = mqttBlockingQueueTask;
     }
 
     @PostConstruct
@@ -90,6 +92,7 @@ public class InfluxDBService {
         threadPoolTaskExecutor.submit(this::listenForMetrics);
         threadPoolTaskExecutor.submit(this::listenForEvents);
         threadPoolTaskExecutor.submit(this::listenForRequests);
+        threadPoolTaskExecutor.submit(this::listenForTasks);
     }
 
     @PreDestroy
@@ -98,7 +101,36 @@ public class InfluxDBService {
         this.mqttBlockingQueue.put(new GenericMessage<>("STOP"));
         this.mqttBlockingQueueEvent.put(new GenericMessage<>("STOP"));
         this.mqttBlockingQueueRequest.put(new GenericMessage<>("STOP"));
-        threadPoolTaskExecutor.shutdown();
+        this.mqttBlockingQueueTask.put(new GenericMessage<>("STOP"));
+        this.threadPoolTaskExecutor.shutdown();
+    }
+
+    private void listenForTasks() {
+        try(InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
+            WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
+            while (atomicBoolean.get()) {
+                try {
+                    logger.info("InfluxDBService is listening for tasks...");
+                    Message<?> message = mqttBlockingQueueTask.take();
+                    if ("STOP".equals(message.getPayload())) {
+                        logger.info("InfluxDBService received termination signal by poison pill...shutdown initiated");
+                        return;
+                    }
+                    // otherwise process workload
+                    String payLoadAsJson = (String) message.getPayload();
+                    JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertTaskStatusLog(jsonNode.toString()));
+                    logger.info("Successfully wrote task status log to InfluxDB: " + payLoadAsJson);
+                } catch (InterruptedException e) {
+                    logger.info("InfluxDBService received termination signal...shutdown initiated");
+                    this.atomicBoolean.set(false);
+                } catch (JsonProcessingException e) {
+                    logger.error("Could not convert message to InfluxDB point: " + e.getMessage());
+                } catch (Exception e) {
+                    logger.error("An error occurred while processing event: " + e.getMessage());
+                }
+            }
+        }
     }
 
     private void listenForRequests() {

@@ -1,6 +1,5 @@
 package dev.pulceo.pms.config;
 
-import dev.pulceo.pms.model.event.PulceoEvent;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -62,6 +61,9 @@ public class MQTTConfig {
     @Bean
     public BlockingQueue<Message<?>> mqttBlockingQueueRequest() { return new LinkedBlockingQueue<>(); }
 
+    @Bean
+    public BlockingQueue<Message<?>> mqttBlockingQueueTask() { return new LinkedBlockingQueue<>(); }
+
     /* Inbound */
     @Bean
     public MessageChannel mqttInputChannel() {
@@ -77,6 +79,9 @@ public class MQTTConfig {
     public MessageChannel mqttInputChannelForRequest() {
         return new DirectChannel();
     }
+
+    @Bean
+    public MessageChannel mqttInputChannelForTask() { return new DirectChannel(); }
 
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
@@ -131,6 +136,19 @@ public class MQTTConfig {
     }
 
     @Bean
+    public MessageProducer inboundTask() {
+        MqttPahoMessageDrivenChannelAdapter adapter =
+                new MqttPahoMessageDrivenChannelAdapter(UUID.randomUUID().toString(), mqttClientFactory(),
+                        "dt/pulceo/tasks");
+        adapter.setCompletionTimeout(5000);
+        adapter.setConverter(new DefaultPahoMessageConverter());
+        adapter.setQos(1);
+        adapter.connectComplete(true);
+        adapter.setOutputChannel(mqttInputChannelForTask());
+        return adapter;
+    }
+
+    @Bean
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public MessageHandler handler() {
         return message -> {
@@ -160,6 +178,18 @@ public class MQTTConfig {
         return message -> {
             try {
                 mqttBlockingQueueRequest().put(message);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+    }
+
+    @Bean
+    @ServiceActivator(inputChannel = "mqttInputChannelForTask")
+    public MessageHandler handlerForTask() {
+        return message -> {
+            try {
+                mqttBlockingQueueTask().put(message);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

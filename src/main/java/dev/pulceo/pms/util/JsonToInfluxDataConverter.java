@@ -213,6 +213,7 @@ public class JsonToInfluxDataConverter {
     public static List<Point> convertTaskStatusLog(String json) throws JsonProcessingException {
         JsonNode jsonNode = mapper.readTree(json);
         Point request = new Point("TASKSTATUSLOG");
+        request.addTag("taskSequenceNumber", jsonNode.get("taskSequenceNumber").asText());
         request.addTag("taskUUID", jsonNode.get("taskUUID").asText());
         request.addTag("timestamp", jsonNode.get("timestamp").asText());
         request.addTag("previousStatus", jsonNode.get("previousStatus").asText());
@@ -225,6 +226,11 @@ public class JsonToInfluxDataConverter {
         request.addTag("taskSchedulingUUID", jsonNode.get("taskSchedulingUUID").asText());
         request.addTag("comment", jsonNode.get("comment").asText());
         request.addField("value", 0);
+        jsonNode.get("properties").fields().forEachRemaining(entry -> {
+            String key = entry.getKey();
+            String value = entry.getValue().asText();
+            request.addTag(key, value);
+        });
         return new ArrayList<>(List.of(request));
     }
 }

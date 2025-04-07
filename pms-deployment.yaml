@@ -84,7 +84,7 @@ spec:
     spec:
       containers:
         - name: pulceo-monitoring-service
-          image: ghcr.io/spboehm/pulceo-monitoring-service:v1.2.0
+          image: ghcr.io/spboehm/pulceo-monitoring-service:v1.3.0
           imagePullPolicy: Always
           volumeMounts:
             - name: psm-pv-db

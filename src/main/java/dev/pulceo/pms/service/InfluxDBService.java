@@ -14,6 +14,7 @@ import dev.pulceo.pms.dto.metrics.NodeMetricDTO;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metric.NodeMetric;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
+import dev.pulceo.pms.model.orchestration.ImmutableOrchestrationContext;
 import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import dev.pulceo.pms.repository.NodeMetricRepository;
 import dev.pulceo.pms.util.InfluxQueryBuilder;
@@ -64,9 +65,10 @@ public class InfluxDBService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final NodeMetricRepository nodeMetricRepository;
     private final NodeLinkMetricRepository nodeLinkMetricRepository;
+    private final OrchestrationContextService orchestrationContextService;
 
     @Autowired
-    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent, BlockingQueue<Message<?>> mqttBlockingQueueRequest, BlockingQueue<Message<?>> mqttBlockingQueueTask) {
+    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent, BlockingQueue<Message<?>> mqttBlockingQueueRequest, BlockingQueue<Message<?>> mqttBlockingQueueTask, OrchestrationContextService orchestrationContextService) {
         this.mqttBlockingQueue = mqttBlockingQueue;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
         this.simpMessagingTemplate = simpMessagingTemplate;
@@ -75,10 +77,12 @@ public class InfluxDBService {
         this.mqttBlockingQueueEvent = mqttBlockingQueueEvent;
         this.mqttBlockingQueueRequest = mqttBlockingQueueRequest;
         this.mqttBlockingQueueTask = mqttBlockingQueueTask;
+        this.orchestrationContextService = orchestrationContextService;
     }
 
     @PostConstruct
     private void postConstruct() {
+        // TODO: retrieve the current orchestration context
         threadPoolTaskExecutor.submit(this::listenForMetrics);
         threadPoolTaskExecutor.submit(this::listenForEvents);
         threadPoolTaskExecutor.submit(this::listenForRequests);
@@ -109,7 +113,7 @@ public class InfluxDBService {
                     // otherwise process workload
                     String payLoadAsJson = (String) message.getPayload();
                     JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
-                    writeApi.writePoints(JsonToInfluxDataConverter.convertTaskStatusLog(jsonNode.toString()));
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertTaskStatusLog(jsonNode.toString(), this.orchestrationContextService.getOrchestrationContext()));
                     logger.info("Successfully wrote task status log to InfluxDB: " + payLoadAsJson);
                 } catch (InterruptedException e) {
                     logger.info("InfluxDBService received termination signal...shutdown initiated");
@@ -137,7 +141,7 @@ public class InfluxDBService {
                     // otherwise process workload
                     String payLoadAsJson = (String) message.getPayload();
                     JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
-                    writeApi.writePoints(JsonToInfluxDataConverter.convertRequest(jsonNode.toString()));
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertRequest(jsonNode.toString(), this.orchestrationContextService.getOrchestrationContext()));
                     logger.info("Successfully wrote request to InfluxDB: " + payLoadAsJson);
                 } catch (InterruptedException e) {
                     logger.info("InfluxDBService received termination signal...shutdown initiated");
@@ -165,7 +169,7 @@ public class InfluxDBService {
                     // otherwise process workload
                     String payLoadAsJson = (String) message.getPayload();
                     JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
-                    writeApi.writePoints(JsonToInfluxDataConverter.convertEvent(jsonNode.toString()));
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertEvent(jsonNode.toString(), this.orchestrationContextService.getOrchestrationContext()));
                     logger.info("Successfully wrote event to InfluxDB: " + payLoadAsJson);
                 } catch (InterruptedException e) {
                     this.atomicBoolean.set(false);
@@ -191,7 +195,7 @@ public class InfluxDBService {
                     }
                     // otherwise process workload
                     String payLoadAsJson = (String) message.getPayload();
-                    writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson, this.orchestrationContextService.getOrchestrationContext()));
                     logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
                     // TODO: check for running metric-requests, send raw data
                     JsonNode metric = this.objectMapper.readTree(payLoadAsJson);
@@ -354,4 +358,5 @@ public class InfluxDBService {
         logger.info("Notified about a new metric request: " + metricRequest.getUuid());
         this.metricRequests.put(metricRequest.getRemoteMetricRequestUUID(), metricRequest);
     }
+
 }

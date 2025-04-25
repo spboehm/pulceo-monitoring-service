@@ -82,7 +82,6 @@ public class InfluxDBService {
 
     @PostConstruct
     private void postConstruct() {
-        // TODO: retrieve the current orchestration context
         threadPoolTaskExecutor.submit(this::listenForMetrics);
         threadPoolTaskExecutor.submit(this::listenForEvents);
         threadPoolTaskExecutor.submit(this::listenForRequests);

@@ -23,7 +23,6 @@ public class PsmApi {
         this.webClient = webClient;
     }
 
-    // TODO: get OrchestrationContext from PSM
     public OrchestrationContextDTO getOrchestrationContext() {
         this.logger.info("Retrieving orchestration context from PSM");
         return webClient

@@ -11,7 +11,7 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @NoArgsConstructor
 @SuperBuilder
-public class OrchestrationContextDTO {
+public class OrchestrationContextFromPsmDTO {
 
     private String uuid;
     private String name;

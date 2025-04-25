@@ -1,7 +1,8 @@
 package dev.pulceo.pms.model.orchestration;
 
 
-import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextDTO;
+import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextFromPsmDTO;
+import dev.pulceo.pms.dto.orchestration.UpdateOrchestrationContextDTO;
 import lombok.Builder;
 import lombok.Value;
 
@@ -12,10 +13,17 @@ public class ImmutableOrchestrationContext {
     String uuid;
     String name;
 
-    public static ImmutableOrchestrationContext fromOrchestrationContextDTO(OrchestrationContextDTO orchestrationContextDTO) {
+    public static ImmutableOrchestrationContext fromOrchestrationContextFromPsmDTO(OrchestrationContextFromPsmDTO orchestrationContextFromPsmDTO) {
         return ImmutableOrchestrationContext.builder()
-                .uuid(orchestrationContextDTO.getUuid())
-                .name(orchestrationContextDTO.getName())
+                .uuid(orchestrationContextFromPsmDTO.getUuid())
+                .name(orchestrationContextFromPsmDTO.getName())
+                .build();
+    }
+
+    public static ImmutableOrchestrationContext fromUpdateUpdateOrchestrationContextDTO(UpdateOrchestrationContextDTO updateOrchestrationContextDTO) {
+        return ImmutableOrchestrationContext.builder()
+                .uuid(updateOrchestrationContextDTO.getUuid())
+                .name(updateOrchestrationContextDTO.getName())
                 .build();
     }
 

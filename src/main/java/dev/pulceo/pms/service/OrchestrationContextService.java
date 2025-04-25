@@ -1,7 +1,7 @@
 package dev.pulceo.pms.service;
 
 import dev.pulceo.pms.api.PsmApi;
-import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextDTO;
+import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextFromPsmDTO;
 import dev.pulceo.pms.model.orchestration.ImmutableOrchestrationContext;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -27,16 +27,17 @@ public class OrchestrationContextService {
         return this.orchestrationContext.get();
     }
 
-    public void setOrchestrationContext(ImmutableOrchestrationContext orchestrationContext) {
+    public ImmutableOrchestrationContext updateOrchestrationContext(ImmutableOrchestrationContext orchestrationContext) {
         this.orchestrationContext.set(orchestrationContext);
+        return this.orchestrationContext.get();
     }
 
     @PostConstruct
     public void init() {
         // Initialize the orchestration context here if needed
-        this.logger.info("Initializing Orchestration Context Service");
-        OrchestrationContextDTO orchestrationContextDTO = this.psmApi.getOrchestrationContext();
-        this.orchestrationContext.set(ImmutableOrchestrationContext.fromOrchestrationContextDTO(orchestrationContextDTO));
+        this.logger.info("Initializing Orchestration Context Service...");
+        OrchestrationContextFromPsmDTO orchestrationContextFromPsmDTO = this.psmApi.getOrchestrationContext();
+        this.orchestrationContext.set(ImmutableOrchestrationContext.fromOrchestrationContextFromPsmDTO(orchestrationContextFromPsmDTO));
     }
 
 }

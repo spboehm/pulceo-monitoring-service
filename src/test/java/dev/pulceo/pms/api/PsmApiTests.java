@@ -2,7 +2,7 @@ package dev.pulceo.pms.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextDTO;
+import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextFromPsmDTO;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,12 +48,12 @@ public class PsmApiTests {
                         .withHeader("Content-Type", "application/json")
                         .withBodyFile("api/psmapi-get-orchestration-context.json")));
         // when
-        OrchestrationContextDTO orchestrationContextDTO = this.psmApi.getOrchestrationContext();
+        OrchestrationContextFromPsmDTO orchestrationContextFromPsmDTO = this.psmApi.getOrchestrationContext();
 
         // then
-        assertNotNull(orchestrationContextDTO);
-        assertEquals("535aab93-b6e6-4e7c-b0a2-5cfca310e68d", orchestrationContextDTO.getUuid());
-        assertEquals("default", orchestrationContextDTO.getName());
+        assertNotNull(orchestrationContextFromPsmDTO);
+        assertEquals("535aab93-b6e6-4e7c-b0a2-5cfca310e68d", orchestrationContextFromPsmDTO.getUuid());
+        assertEquals("default", orchestrationContextFromPsmDTO.getName());
     }
 
     @Test
@@ -63,12 +63,12 @@ public class PsmApiTests {
                 .willReturn(aResponse()
                         .withStatus(500)));
         // when
-        OrchestrationContextDTO orchestrationContextDTO = this.psmApi.getOrchestrationContext();
+        OrchestrationContextFromPsmDTO orchestrationContextFromPsmDTO = this.psmApi.getOrchestrationContext();
 
         // then
-        assertNotNull(orchestrationContextDTO);
-        assertEquals("00000000-0000-0000-0000-000000000000", orchestrationContextDTO.getUuid());
-        assertEquals("default", orchestrationContextDTO.getName());
+        assertNotNull(orchestrationContextFromPsmDTO);
+        assertEquals("00000000-0000-0000-0000-000000000000", orchestrationContextFromPsmDTO.getUuid());
+        assertEquals("default", orchestrationContextFromPsmDTO.getName());
     }
 
 }

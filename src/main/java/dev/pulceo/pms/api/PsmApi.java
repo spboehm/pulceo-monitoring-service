@@ -1,6 +1,6 @@
 package dev.pulceo.pms.api;
 
-import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextDTO;
+import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextFromPsmDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,19 +23,19 @@ public class PsmApi {
         this.webClient = webClient;
     }
 
-    public OrchestrationContextDTO getOrchestrationContext() {
+    public OrchestrationContextFromPsmDTO getOrchestrationContext() {
         this.logger.info("Retrieving orchestration context from PSM");
         return webClient
                 .get()
                 .uri(this.psmEndpoint + this.PSM_ORCHESTRATION_CONTEXT_API_BASE_PATH)
                 .retrieve()
-                .bodyToMono(OrchestrationContextDTO.class)
-                .doOnSuccess(orchestrationContextDTO -> {
-                    this.logger.info("Successfully retrieved orchestration context from PSM: uuid={}, name={}", orchestrationContextDTO.getUuid(), orchestrationContextDTO.getName());
+                .bodyToMono(OrchestrationContextFromPsmDTO.class)
+                .doOnSuccess(orchestrationContextFromPsmDTO -> {
+                    this.logger.info("Successfully retrieved orchestration context from PSM: uuid={}, name={}", orchestrationContextFromPsmDTO.getUuid(), orchestrationContextFromPsmDTO.getName());
                 })
                 .onErrorResume(e -> {
                     this.logger.warn("Could not retrieve orchestration context from PSM...use default orchestration context", e);
-                    return Mono.just(OrchestrationContextDTO.builder()
+                    return Mono.just(OrchestrationContextFromPsmDTO.builder()
                                                             .uuid("00000000-0000-0000-0000-000000000000")
                                                             .name("default")
                                                             .build());

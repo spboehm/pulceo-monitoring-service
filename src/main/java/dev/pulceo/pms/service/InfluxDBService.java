@@ -54,25 +54,15 @@ public class InfluxDBService {
     private String influxDBUrl;
 
     private final BlockingQueue<Message<?>> mqttBlockingQueue;
-
     private final BlockingQueue<Message<?>> mqttBlockingQueueEvent;
-
     private final BlockingQueue<Message<?>> mqttBlockingQueueRequest;
-
     private final BlockingQueue<Message<?>> mqttBlockingQueueTask;
-
     private final AtomicBoolean atomicBoolean = new AtomicBoolean(true);
-
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
-
     private final SimpMessagingTemplate simpMessagingTemplate;
-
     private final ConcurrentHashMap<UUID, MetricRequest> metricRequests = new ConcurrentHashMap<>();
-
     private final ObjectMapper objectMapper = new ObjectMapper();
-
     private final NodeMetricRepository nodeMetricRepository;
-
     private final NodeLinkMetricRepository nodeLinkMetricRepository;
 
     @Autowired

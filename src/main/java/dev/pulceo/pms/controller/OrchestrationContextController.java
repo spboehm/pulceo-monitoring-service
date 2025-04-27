@@ -20,15 +20,13 @@ public class OrchestrationContextController {
     private final MetricsQueryService metricsQueryService;
     private final MetricsService metricsService;
 
+    @Autowired
     public OrchestrationContextController(OrchestrationContextService orchestrationContextService, InfluxDBService influxDBService, MetricsQueryService metricsQueryService, MetricsService metricsService) {
         this.orchestrationContextService = orchestrationContextService;
         this.influxDBService = influxDBService;
         this.metricsQueryService = metricsQueryService;
         this.metricsService = metricsService;
     }
-
-    @Autowired
-
 
     @GetMapping
     public ResponseEntity<OrchestrationContextDTO> readOrchestrationContext() {

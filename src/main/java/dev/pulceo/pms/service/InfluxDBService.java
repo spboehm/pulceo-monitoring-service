@@ -358,6 +358,7 @@ public class InfluxDBService {
     public void reset() {
         this.nodeLinkMetricRepository.deleteAll();
         this.nodeMetricRepository.deleteAll();
+        this.metricRequests.clear();
 
         try (InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
             DeleteApi deleteApi = influxDBClient.getDeleteApi();

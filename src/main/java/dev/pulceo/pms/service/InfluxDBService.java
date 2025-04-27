@@ -3,10 +3,7 @@ package dev.pulceo.pms.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.influxdb.client.InfluxDBClient;
-import com.influxdb.client.InfluxDBClientFactory;
-import com.influxdb.client.QueryApi;
-import com.influxdb.client.WriteApiBlocking;
+import com.influxdb.client.*;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
@@ -14,7 +11,6 @@ import dev.pulceo.pms.dto.metrics.NodeMetricDTO;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metric.NodeMetric;
 import dev.pulceo.pms.model.metricrequests.MetricRequest;
-import dev.pulceo.pms.model.orchestration.ImmutableOrchestrationContext;
 import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import dev.pulceo.pms.repository.NodeMetricRepository;
 import dev.pulceo.pms.util.InfluxQueryBuilder;
@@ -31,6 +27,7 @@ import org.springframework.messaging.support.GenericMessage;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -356,6 +353,21 @@ public class InfluxDBService {
     public void notifyAboutNewMetricRequest(MetricRequest metricRequest) {
         logger.info("Notified about a new metric request: " + metricRequest.getUuid());
         this.metricRequests.put(metricRequest.getRemoteMetricRequestUUID(), metricRequest);
+    }
+
+    public void reset() {
+        this.nodeLinkMetricRepository.deleteAll();
+        this.nodeMetricRepository.deleteAll();
+
+        try (InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
+            DeleteApi deleteApi = influxDBClient.getDeleteApi();
+            OffsetDateTime start = OffsetDateTime.parse("1970-01-01T00:00:00Z");
+            OffsetDateTime stop = OffsetDateTime.now();
+            deleteApi.delete(start, stop, "", bucket, org);
+            this.logger.info("Successfully wiped the bucket: " + bucket);
+        } catch (Exception e) {
+            this.logger.error("Error while deleting data from InfluxDB: " + e.getMessage());
+        }
     }
 
 }

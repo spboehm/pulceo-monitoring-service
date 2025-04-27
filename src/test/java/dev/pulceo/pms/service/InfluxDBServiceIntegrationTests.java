@@ -7,9 +7,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 public class InfluxDBServiceIntegrationTests {
 
+    @Autowired
+    private InfluxDBService influxDBService;
+
     @Test
-    public void test() {
+    public void testReset() {
+        // given
+
+        // when
+        // this.influxDBService.reset();
+
+        // then
 
     }
+
+
+
 
 }

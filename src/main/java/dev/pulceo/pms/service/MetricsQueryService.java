@@ -259,4 +259,8 @@ public class MetricsQueryService {
         }
         throw new MetricsQueryServiceException("Measurement %s not found!".formatted(measurement));
     }
+
+    public void reset() {
+        this.metricExportRepository.deleteAll();
+    }
 }

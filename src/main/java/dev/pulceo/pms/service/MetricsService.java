@@ -677,6 +677,10 @@ public class MetricsService {
         return metricRequests;
     }
 
+    public void reset() {
+        this.metricRequestRepository.deleteAll();
+    }
+
     // TODO: on startup inform InfluxDBService about all existing metric requests that are in DB
 
     // TODO: on shutdown inform InfluxDBService to stop all running metric requests

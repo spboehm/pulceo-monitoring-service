@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="pmsdb" uuid="82a77005-5a44-4867-a1bb-b9853e211f28">
+    <data-source source="LOCAL" name="pmsdb-dev" uuid="82a77005-5a44-4867-a1bb-b9853e211f28">
       <driver-ref>h2.unified</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.h2.Driver</jdbc-driver>

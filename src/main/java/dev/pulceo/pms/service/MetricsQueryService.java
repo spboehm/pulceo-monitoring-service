@@ -5,6 +5,8 @@ import com.influxdb.client.InfluxDBClientFactory;
 import com.influxdb.client.QueryApi;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
+import dev.pulceo.pms.api.PsmApi;
+import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextFromPsmDTO;
 import dev.pulceo.pms.dto.metrics.ShortNodeLinkMetricDTO;
 import dev.pulceo.pms.exception.MetricsQueryServiceException;
 import dev.pulceo.pms.model.metric.MetricType;
@@ -27,6 +29,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -70,10 +73,16 @@ public class MetricsQueryService {
 
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
+    private final PsmApi psmApi;
+
+    @Value("${pulceo.data.dir}")
+    private String pulceoDataDir;
+
     @Autowired
-    public MetricsQueryService(MetricExportRepository metricExportRepository, ThreadPoolTaskExecutor threadPoolTaskExecutor) {
+    public MetricsQueryService(MetricExportRepository metricExportRepository, ThreadPoolTaskExecutor threadPoolTaskExecutor, PsmApi psmApi) {
         this.metricExportRepository = metricExportRepository;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
+        this.psmApi = psmApi;
     }
 
     @PostConstruct
@@ -224,6 +233,14 @@ public class MetricsQueryService {
             countDownLatch.await(); // wait for influxdb thread to finish
             logger.info("{} successfully written", filename);
         }
+
+        /* Save to pulceo data dir */
+        // get the current orchestration-context, maybe remove this, because already set?
+        OrchestrationContextFromPsmDTO orchestrationContextFromPsmDTO = this.psmApi.getOrchestrationContext();
+        // ensure directories are created
+        this.createDirsForOrchestrationData(UUID.fromString(orchestrationContextFromPsmDTO.getUuid()));
+        // write to the file
+        Files.copy(Path.of(this.pmsDatDir, filename), Path.of(this.pulceoDataDir, "raw", orchestrationContextFromPsmDTO.getUuid(), measurement + ".csv"), StandardCopyOption.REPLACE_EXISTING);
     }
 
     private String resolveInfluxQuery(MetricType measurement) {
@@ -240,6 +257,18 @@ public class MetricsQueryService {
         } catch (IOException e) {
             logger.error("Could not create PMS data directory", e);
             throw new MetricsQueryServiceException("Could not create PMS data directory", e);
+        }
+    }
+
+    private void createDirsForOrchestrationData(UUID orchestrationUUID) {
+        logger.info("Creating directories for orchestration data with uuid={}", orchestrationUUID);
+        try {
+            Files.createDirectories(Path.of(this.pulceoDataDir, "raw", orchestrationUUID.toString()));
+            Files.createDirectories(Path.of(this.pulceoDataDir, "plots", orchestrationUUID.toString()));
+            Files.createDirectories(Path.of(this.pulceoDataDir, "latex", orchestrationUUID.toString()));
+            Files.createDirectories(Path.of(this.pulceoDataDir, "reports", orchestrationUUID.toString()));
+        } catch (IOException e) {
+            logger.error("Could not create directories for orchestration data", e);
         }
     }
 

@@ -64,6 +64,7 @@ public class MetricExportController {
 
     @GetMapping(value = "/{metricExportUuid}/blobs/{filename}")
     public ResponseEntity<Object> downloadExportedMetrics(@PathVariable UUID metricExportUuid, @PathVariable String filename) throws MetricsQueryServiceException {
+        this.logger.info("Received request to download exported metric export with UUID: {} and filename: {}", metricExportUuid, filename);
         Optional<MetricExport> metricExport = this.metricsQueryService.readMetricExportByUuid(metricExportUuid);
         if (metricExport.isEmpty()) {
             throw new MetricsQueryServiceException("Metric export not found");

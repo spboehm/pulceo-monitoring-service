@@ -181,7 +181,7 @@ public class MetricsQueryService {
         long numberOfRecords = this.getNumberOfRecords(metricExportRequest.getMetricType());
         logger.info("Number of records for metric type {} is {}", metricExportRequest.getMetricType(), numberOfRecords);
         if (numberOfRecords == 0) {
-            throw new MetricsQueryServiceException("No records found for metric type %s".formatted(metricExportRequest.getMetricType()));
+            this.logger.warn("No records found for metric type %s".formatted(metricExportRequest.getMetricType()));
         }
         String filename = metricExportRequest.getMetricType() + "-" + UUID.randomUUID() + ".csv";
         MetricExport metricExport = MetricExport.builder()
@@ -211,6 +211,7 @@ public class MetricsQueryService {
     }
 
     private void getMeasurementAsCSV(MetricType measurement, String filename) throws InterruptedException, IOException, MetricsQueryServiceException {
+        this.logger.info("Getting measurement metricType={} as CSV", measurement);
         QueryApi queryApi = influxDBClient.getQueryApi();
         String influxQuery = resolveInfluxQuery(measurement);
         long numberOfMeasurements = this.getNumberOfRecords(measurement);
@@ -222,7 +223,7 @@ public class MetricsQueryService {
                 try {
                     writer.write(line);
                     writer.newLine();
-                    if (count.incrementAndGet() == numberOfMeasurements) {
+                    if (count.getAndIncrement() == numberOfMeasurements) {
                         countDownLatch.countDown();
                         cancellable.cancel();
                     }
@@ -232,6 +233,12 @@ public class MetricsQueryService {
             });
             countDownLatch.await(); // wait for influxdb thread to finish
             logger.info("{} successfully written", filename);
+        } catch (IOException e) {
+            logger.error("Could not write {}!", filename, e);
+            throw new MetricsQueryServiceException("Could not write %s!".formatted(filename), e);
+        } catch (InterruptedException e) {
+            logger.error("Could not wait for influxdb thread to finish", e);
+            throw new MetricsQueryServiceException("Could not wait for influxdb thread to finish", e);
         }
 
         /* Save to pulceo data dir */
@@ -286,7 +293,7 @@ public class MetricsQueryService {
                 }
             }
         }
-        throw new MetricsQueryServiceException("Measurement %s not found!".formatted(measurement));
+        return 0;
     }
 
     public void reset() {

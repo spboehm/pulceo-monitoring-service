@@ -40,6 +40,7 @@ public class MetricExportController {
     public ResponseEntity<MetricExportDTO> createMetricExport(@RequestBody @Valid MetricExportRequestDTO metricExportRequestDTO) throws MetricsQueryServiceException {
         this.logger.info("Received request to create a new metric export");
         MetricExport metricExport = this.metricsQueryService.createMetricExport(MetricExportRequest.fromMetricExportRequestDTO(metricExportRequestDTO));
+        this.metricsQueryService.queueForScheduling(metricExport.getId());
         return ResponseEntity.status(201).body(MetricExportDTO.fromMetricExportDTO(metricExport));
     }
 

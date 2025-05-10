@@ -230,7 +230,7 @@ public class JsonToInfluxDataConverter {
 
     public static List<Point> convertTaskStatusLog(String json, ImmutableOrchestrationContext immutableOrchestrationContext) throws JsonProcessingException {
         JsonNode jsonNode = mapper.readTree(json);
-        Point request = new Point("TASKSTATUSLOG");
+        Point request = new Point("TASK_STATUS_LOG");
         addOrchestrationContext(request, immutableOrchestrationContext);
         request.addTag("taskSequenceNumber", jsonNode.get("taskSequenceNumber").asText());
         request.addTag("taskUUID", jsonNode.get("taskUUID").asText());

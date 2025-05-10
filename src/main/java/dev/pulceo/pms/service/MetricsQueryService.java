@@ -190,14 +190,16 @@ public class MetricsQueryService {
                 .filename(filename)
                 .build();
         metricExport.setUrl(pulceoLBEndpoint + "/api/v1/metric-exports/" + metricExport.getUuid() + "/blobs/" + filename);
-        MetricExport savedMetricExport = this.metricExportRepository.save(metricExport);
+        return this.metricExportRepository.save(metricExport);
+    }
+
+    public void queueForScheduling(long metricExportId) throws MetricsQueryServiceException {
         try {
-            this.metricExportQueue.put(savedMetricExport.getId());
+            this.metricExportQueue.put(metricExportId);
         } catch (InterruptedException e) {
             logger.error("Could not put metric export in queue", e);
             throw new MetricsQueryServiceException("Could not put metric export in queue!", e);
         }
-        return savedMetricExport;
     }
 
     public List<MetricExport> readAllMetricExports() {

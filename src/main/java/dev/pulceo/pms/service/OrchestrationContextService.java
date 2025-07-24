@@ -35,6 +35,7 @@ public class OrchestrationContextService {
     }
 
     public ImmutableOrchestrationContext updateOrchestrationContext(ImmutableOrchestrationContext orchestrationContext) {
+        this.logger.info("Updating OrchestrationContext to uuid={}, name={}", orchestrationContext.getUuid(), orchestrationContext.getName());
         this.orchestrationContext.set(orchestrationContext);
         return this.orchestrationContext.get();
     }

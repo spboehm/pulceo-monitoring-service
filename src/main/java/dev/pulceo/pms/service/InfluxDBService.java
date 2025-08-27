@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.*;
+import com.influxdb.client.domain.Bucket;
+import com.influxdb.client.domain.Organization;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
@@ -79,6 +81,7 @@ public class InfluxDBService {
 
     @PostConstruct
     private void postConstruct() {
+        this.createInfluxDbBucketIfNotExists();
         threadPoolTaskExecutor.submit(this::listenForMetrics);
         threadPoolTaskExecutor.submit(this::listenForEvents);
         threadPoolTaskExecutor.submit(this::listenForRequests);
@@ -368,6 +371,32 @@ public class InfluxDBService {
             this.logger.info("Successfully wiped the bucket: " + bucket);
         } catch (Exception e) {
             this.logger.error("Error while deleting data from InfluxDB: " + e.getMessage());
+        }
+    }
+
+    private void createInfluxDbBucketIfNotExists() {
+        try (InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org)) {
+            OrganizationsApi organizationsApi = influxDBClient.getOrganizationsApi();
+            Organization organization = organizationsApi.findOrganizations()
+                    .stream()
+                    .filter(o -> o.getName().equals(org))
+                    .findFirst()
+                    .orElse(null);
+            if (organization == null) {
+                throw new RuntimeException("Organization not found: " + org);
+            }
+            BucketsApi bucketsApi = influxDBClient.getBucketsApi();
+            Bucket searchedBucket = bucketsApi.findBucketByName(bucket);
+            if (searchedBucket == null) {
+                // create bucket
+                Bucket bucketCreated = bucketsApi.createBucket(bucket, organization.getId());
+                logger.info("Created InfluxDB bucket: " + bucketCreated.getName());
+            } else {
+                logger.info("InfluxDB bucket already exists: " + searchedBucket);
+            }
+        } catch (Exception e) {
+            logger.error("Error while creating InfluxDB bucket: " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 

@@ -5,6 +5,7 @@ import dev.pulceo.pms.dto.link.NodeLinkDTO;
 import dev.pulceo.pms.dto.metricrequests.pna.*;
 import dev.pulceo.pms.dto.node.NodeDTO;
 import dev.pulceo.pms.exception.MetricsServiceException;
+import dev.pulceo.pms.exception.ResourceNotFoundException;
 import dev.pulceo.pms.model.event.EventType;
 import dev.pulceo.pms.model.event.PulceoEvent;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
@@ -12,6 +13,8 @@ import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.repository.MetricRequestRepository;
 import dev.pulceo.pms.repository.NodeLinkMetricRepository;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -25,6 +28,7 @@ import java.util.UUID;
 @Service
 public class MetricsService {
 
+    private final Logger logger = LoggerFactory.getLogger(MetricsService.class);
     private final MetricRequestRepository metricRequestRepository;
     private final NodeLinkMetricRepository nodeLinkMetricRepository;
     // ws
@@ -513,7 +517,7 @@ public class MetricsService {
     }
 
 
-    public MetricRequest createNewResourceUtilizationRequestForNode(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) throws InterruptedException {
+    public MetricRequest createNewResourceUtilizationRequestForNode(ResourceUtilizationMetricRequest resourceUtilizationMetricRequest) throws InterruptedException, MetricsServiceException {
         // TODO: evalutate nodeId
         if (resourceUtilizationMetricRequest.getNodeId() == null) {
             throw new RuntimeException(new MetricsServiceException("Can not create metric request: Node id is missing!"));
@@ -541,6 +545,13 @@ public class MetricsService {
         }
         MetricRequest lastMetricRequest = null;
         for (NodeDTO node : allNodes) {
+            // check if there is already a metric request for that node, same type
+            if (this.checkIfMetricRequestsExists(node.getUuid(), resourceUtilizationMetricRequest.getType())) {
+                this.logger.warn("Metric request for nodeUuid={} and type={} does already exist...skipping creation", node.getUuid(), resourceUtilizationMetricRequest.getType());
+                lastMetricRequest = this.readMetricRequestByLinkUuidAndType(node.getUuid(), resourceUtilizationMetricRequest.getType());
+                continue; // skip the current interation
+            }
+
             // first obtain the hostname
             String srcNodeID = node.getUuid().toString();
             NodeDTO srcNode = webClientToPRM.get()
@@ -587,7 +598,16 @@ public class MetricsService {
 
             lastMetricRequest = savedMetricRequest;
         }
+
         return lastMetricRequest;
+    }
+
+    public MetricRequest readMetricRequestByLinkUuidAndType(UUID linkUUID, String type) {
+        return this.metricRequestRepository.findByLinkUUIDAndType(linkUUID, type).orElseThrow(() -> new ResourceNotFoundException("Metric request with linkUUID={} and type={}".formatted(linkUUID, type)));
+    }
+
+    private boolean checkIfMetricRequestsExists(UUID linkUUID, String type) {
+        return this.metricRequestRepository.existsMetricRequestByLinkUUIDAndType(linkUUID, type);
     }
 
     public void deleteMetricRequest(UUID metricRequestUUID) throws InterruptedException {
@@ -675,6 +695,10 @@ public class MetricsService {
             metricRequests.add(metricRequest);
         }
         return metricRequests;
+    }
+
+    public void reset() {
+        this.metricRequestRepository.deleteAll();
     }
 
     // TODO: on startup inform InfluxDBService about all existing metric requests that are in DB

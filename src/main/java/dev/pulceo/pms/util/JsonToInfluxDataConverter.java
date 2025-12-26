@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.write.Point;
+import dev.pulceo.pms.model.orchestration.ImmutableOrchestrationContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,37 +14,43 @@ public class JsonToInfluxDataConverter {
     // safe
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    public static List<Point> convertMetric(String json) throws JsonProcessingException {
+    public static List<Point> convertMetric(String json, ImmutableOrchestrationContext immutableOrchestrationContext) throws JsonProcessingException {
         JsonNode jsonNode = mapper.readTree(json);
         String type = jsonNode.get("metric").get("metricType").asText();
         switch(type) {
             case "CPU_UTIL":
-                return convertCPUUtilMetric(jsonNode);
+                return convertCPUUtilMetric(jsonNode, immutableOrchestrationContext);
             case "MEM_UTIL":
-                return convertMemUtilMetric(jsonNode);
+                return convertMemUtilMetric(jsonNode, immutableOrchestrationContext);
             case "NET_UTIL":
-                return convertNetUtilMetric(jsonNode);
+                return convertNetUtilMetric(jsonNode, immutableOrchestrationContext);
             case "STORAGE_UTIL":
-                return convertStorageUtilMetric(jsonNode);
+                return convertStorageUtilMetric(jsonNode, immutableOrchestrationContext);
             case "ICMP_RTT":
-                return convertICMPRTTMetric(jsonNode);
+                return convertICMPRTTMetric(jsonNode, immutableOrchestrationContext);
             case "TCP_RTT":
-                return convertTCPRTTMetric(jsonNode);
+                return convertTCPRTTMetric(jsonNode, immutableOrchestrationContext);
             case "UDP_RTT":
-                return convertUDPRTTMetric(jsonNode);
+                return convertUDPRTTMetric(jsonNode, immutableOrchestrationContext);
             case "TCP_BW":
-                return convertTCPBWMetric(jsonNode);
+                return convertTCPBWMetric(jsonNode, immutableOrchestrationContext);
             case "UDP_BW":
-                return convertUDPBWMetric(jsonNode);
+                return convertUDPBWMetric(jsonNode, immutableOrchestrationContext);
             case "EVENT":
-                return convertEvent(json);
+                return convertEvent(json, immutableOrchestrationContext);
             default:
                 throw new IllegalArgumentException("Unknown metric type: " + type);
         }
     }
 
-    private static List<Point> convertCPUUtilMetric(JsonNode jsonNode) {
+    private static void addOrchestrationContext (Point point, ImmutableOrchestrationContext immutableOrchestrationContext) {
+        point.addTag("orchestrationUUID", immutableOrchestrationContext.getUuid());
+        point.addTag("orchestrationName", immutableOrchestrationContext.getName());
+    }
+
+    private static List<Point> convertCPUUtilMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         Point cpuUtilMeasurement = new Point("CPU_UTIL");
+        addOrchestrationContext(cpuUtilMeasurement, immutableOrchestrationContext);
         addNodeMetricDataAsTags(jsonNode, cpuUtilMeasurement);
         cpuUtilMeasurement.addField("usageNanoCores", jsonNode.get("metric").get("metricResult").get("cpuUtilizationMeasurement").get("usageNanoCores").asLong());
         cpuUtilMeasurement.addField("usageCoreNanoSeconds", jsonNode.get("metric").get("metricResult").get("cpuUtilizationMeasurement").get("usageCoreNanoSeconds").asLong());
@@ -51,8 +58,9 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(cpuUtilMeasurement));
     }
 
-    private static List<Point> convertMemUtilMetric(JsonNode jsonNode) {
+    private static List<Point> convertMemUtilMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         Point memUtilMeasurement = new Point("MEM_UTIL");
+        addOrchestrationContext(memUtilMeasurement, immutableOrchestrationContext);
         addNodeMetricDataAsTags(jsonNode, memUtilMeasurement);
         memUtilMeasurement.addField("usageBytes", jsonNode.get("metric").get("metricResult").get("memoryUtilizationMeasurement").get("usageBytes").asLong());
         memUtilMeasurement.addField("availableBytes", jsonNode.get("metric").get("metricResult").get("memoryUtilizationMeasurement").get("availableBytes").asLong());
@@ -60,8 +68,9 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(memUtilMeasurement));
     }
 
-    private static List<Point> convertNetUtilMetric(JsonNode jsonNode) {
+    private static List<Point> convertNetUtilMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         Point netUtilMeasurement = new Point("NET_UTIL");
+        addOrchestrationContext(netUtilMeasurement, immutableOrchestrationContext);
         addNodeMetricDataAsTags(jsonNode, netUtilMeasurement);
         netUtilMeasurement.addTag("iface", jsonNode.get("metric").get("metricResult").get("networkUtilizationMeasurement").get("iface").asText());
         netUtilMeasurement.addField("rxBytes", jsonNode.get("metric").get("metricResult").get("networkUtilizationMeasurement").get("rxBytes").asLong());
@@ -69,8 +78,9 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(netUtilMeasurement));
     }
 
-    private static List<Point> convertStorageUtilMetric(JsonNode jsonNode) {
+    private static List<Point> convertStorageUtilMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         Point storageUtilMeasurement = new Point("STORAGE_UTIL");
+        addOrchestrationContext(storageUtilMeasurement, immutableOrchestrationContext);
         addNodeMetricDataAsTags(jsonNode, storageUtilMeasurement);
         storageUtilMeasurement.addField("usageBytes", jsonNode.get("metric").get("metricResult").get("storageUtilizationMeasurement").get("usedBytes").asLong());
         storageUtilMeasurement.addField("availableBytes", jsonNode.get("metric").get("metricResult").get("storageUtilizationMeasurement").get("capacityBytes").asLong());
@@ -78,8 +88,9 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(storageUtilMeasurement));
     }
 
-    private static List<Point> convertICMPRTTMetric(JsonNode jsonNode) {
+    private static List<Point> convertICMPRTTMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         Point pingDelayMeasurement = new Point("ICMP_RTT");
+        addOrchestrationContext(pingDelayMeasurement, immutableOrchestrationContext);
         addNetworkMetricDataAsTags(jsonNode, pingDelayMeasurement);
         pingDelayMeasurement.addField("packetsTransmitted", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("packetsTransmitted").asInt());
         pingDelayMeasurement.addField("packetsReceived", jsonNode.get("metric").get("metricResult").get("pingDelayMeasurement").get("packetsReceived").asInt());
@@ -114,10 +125,11 @@ public class JsonToInfluxDataConverter {
         point.addTag("endTime", jsonNode.get("metric").get("metricResult").get("endTime").asText());
     }
 
-    private static List<Point> convertUDPBWMetric(JsonNode jsonNode) {
+    private static List<Point> convertUDPBWMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         String measurementName = "UDP_BW";
         // For receiver
         Point iperfBandwidthMeasurementReceiverPoint = new Point(measurementName);
+        addOrchestrationContext(iperfBandwidthMeasurementReceiverPoint, immutableOrchestrationContext);
         addNetworkMetricDataAsTags(jsonNode, iperfBandwidthMeasurementReceiverPoint);
         addUDPBandwithMeasurement(jsonNode, iperfBandwidthMeasurementReceiverPoint, "iperfBandwidthMeasurementReceiver");
         // For sender
@@ -144,22 +156,25 @@ public class JsonToInfluxDataConverter {
         iperfBandwidthMeasurementReceiverPoint.addTag("iperfRole", jsonNode.get("metric").get("metricResult").get(iperfBandwidthMeasurementRole).get("iperfRole").asText());
     }
 
-    private static List<Point> convertTCPBWMetric(JsonNode jsonNode) {
+    private static List<Point> convertTCPBWMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         String measurementName = "TCP_BW";
         // For receiver
         Point iperfBandwidthMeasurementReceiverPoint = new Point(measurementName);
+        addOrchestrationContext(iperfBandwidthMeasurementReceiverPoint, immutableOrchestrationContext);
         addNetworkMetricDataAsTags(jsonNode, iperfBandwidthMeasurementReceiverPoint);
         addTCPBandWidthMeasurement(jsonNode, iperfBandwidthMeasurementReceiverPoint, "iperfBandwidthMeasurementReceiver");
         // For sender
         Point iperfBandwidthMeasurementSenderPoint = new Point(measurementName);
+        addOrchestrationContext(iperfBandwidthMeasurementSenderPoint, immutableOrchestrationContext);
         addNetworkMetricDataAsTags(jsonNode, iperfBandwidthMeasurementSenderPoint);
         addTCPBandWidthMeasurement(jsonNode, iperfBandwidthMeasurementSenderPoint, "iperfBandwidthMeasurementSender");
         return new ArrayList<>(List.of(iperfBandwidthMeasurementReceiverPoint, iperfBandwidthMeasurementSenderPoint));
     }
 
-    private static List<Point> convertUDPRTTMetric(JsonNode jsonNode) {
+    private static List<Point> convertUDPRTTMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         String measurementName = "UDP_RTT";
         Point npingUDPDelayMeasurment = new Point(measurementName);
+        addOrchestrationContext(npingUDPDelayMeasurment, immutableOrchestrationContext);
         addNetworkMetricDataAsTags(jsonNode, npingUDPDelayMeasurment);
         npingUDPDelayMeasurment.addField("dataLength", jsonNode.get("metric").get("metricResult").get("dataLength").asInt());
         npingUDPDelayMeasurment.addField("maxRTT", jsonNode.get("metric").get("metricResult").get("npingUDPDelayMeasurement").get("maxRTT").asDouble());
@@ -172,9 +187,10 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(npingUDPDelayMeasurment));
     }
 
-    private static List<Point> convertTCPRTTMetric(JsonNode jsonNode) {
+    private static List<Point> convertTCPRTTMetric(JsonNode jsonNode, ImmutableOrchestrationContext immutableOrchestrationContext) {
         String measurementName = "TCP_RTT";
         Point npingTCPDelayMeasurement = new Point(measurementName);
+        addOrchestrationContext(npingTCPDelayMeasurement, immutableOrchestrationContext);
         addNetworkMetricDataAsTags(jsonNode, npingTCPDelayMeasurement);
         npingTCPDelayMeasurement.addField("maxRTT", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("maxRTT").asDouble());
         npingTCPDelayMeasurement.addField("minRTT", jsonNode.get("metric").get("metricResult").get("npingTCPDelayMeasurement").get("minRTT").asDouble());
@@ -186,9 +202,10 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(npingTCPDelayMeasurement));
     }
 
-    public static List<Point> convertEvent(String json) throws JsonProcessingException {
+    public static List<Point> convertEvent(String json, ImmutableOrchestrationContext immutableOrchestrationContext) throws JsonProcessingException {
         JsonNode jsonNode = mapper.readTree(json);
         Point event = new Point("EVENT");
+        addOrchestrationContext(event, immutableOrchestrationContext);
         event.addTag("eventUUID", jsonNode.get("eventUUID").asText());
         event.addTag("timestamp", jsonNode.get("timestamp").asText());
         event.addTag("eventType", jsonNode.get("eventType").asText());
@@ -196,9 +213,10 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(event));
     }
 
-    public static List<Point> convertRequest(String json) throws JsonProcessingException {
+    public static List<Point> convertRequest(String json, ImmutableOrchestrationContext immutableOrchestrationContext) throws JsonProcessingException {
         JsonNode jsonNode = mapper.readTree(json);
         Point request = new Point("REQUEST");
+        addOrchestrationContext(request, immutableOrchestrationContext);
         request.addTag("requestUUID", jsonNode.get("requestUUID").asText());
         request.addTag("timestamp", jsonNode.get("timestamp").asText());
         request.addTag("requestType", jsonNode.get("requestType").asText());
@@ -210,9 +228,10 @@ public class JsonToInfluxDataConverter {
         return new ArrayList<>(List.of(request));
     }
 
-    public static List<Point> convertTaskStatusLog(String json) throws JsonProcessingException {
+    public static List<Point> convertTaskStatusLog(String json, ImmutableOrchestrationContext immutableOrchestrationContext) throws JsonProcessingException {
         JsonNode jsonNode = mapper.readTree(json);
-        Point request = new Point("TASKSTATUSLOG");
+        Point request = new Point("TASK_STATUS_LOG");
+        addOrchestrationContext(request, immutableOrchestrationContext);
         request.addTag("taskSequenceNumber", jsonNode.get("taskSequenceNumber").asText());
         request.addTag("taskUUID", jsonNode.get("taskUUID").asText());
         request.addTag("timestamp", jsonNode.get("timestamp").asText());

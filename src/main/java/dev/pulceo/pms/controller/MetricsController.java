@@ -6,13 +6,14 @@ import dev.pulceo.pms.exception.MetricsServiceException;
 import dev.pulceo.pms.model.metric.NodeLinkMetric;
 import dev.pulceo.pms.model.metricrequests.*;
 import dev.pulceo.pms.service.MetricsService;
-import jakarta.websocket.server.PathParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.*;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -88,4 +89,14 @@ public class MetricsController {
     public void deleteMetricRequest(@PathVariable UUID metricRequestUUID) throws InterruptedException {
         this.metricsService.deleteMetricRequest(metricRequestUUID);
     }
+
+    @ExceptionHandler(value = MetricsServiceException.class)
+    public ResponseEntity<CustomErrorResponse> handleCloudRegistrationException(MetricsServiceException metricsServiceException) {
+        CustomErrorResponse error = new CustomErrorResponse("BAD_REQUEST", metricsServiceException.getMessage());
+        error.setStatus(HttpStatus.BAD_REQUEST.value());
+        error.setErrorMsg(metricsServiceException.getMessage());
+        error.setTimestamp(LocalDateTime.now());
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
 }

@@ -5,6 +5,8 @@ import com.influxdb.client.InfluxDBClientFactory;
 import com.influxdb.client.QueryApi;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
+import dev.pulceo.pms.api.PsmApi;
+import dev.pulceo.pms.api.dto.orchestration.OrchestrationContextFromPsmDTO;
 import dev.pulceo.pms.dto.metrics.ShortNodeLinkMetricDTO;
 import dev.pulceo.pms.exception.MetricsQueryServiceException;
 import dev.pulceo.pms.model.metric.MetricType;
@@ -27,6 +29,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -70,10 +73,16 @@ public class MetricsQueryService {
 
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
+    private final PsmApi psmApi;
+
+    @Value("${pulceo.data.dir}")
+    private String pulceoDataDir;
+
     @Autowired
-    public MetricsQueryService(MetricExportRepository metricExportRepository, ThreadPoolTaskExecutor threadPoolTaskExecutor) {
+    public MetricsQueryService(MetricExportRepository metricExportRepository, ThreadPoolTaskExecutor threadPoolTaskExecutor, PsmApi psmApi) {
         this.metricExportRepository = metricExportRepository;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
+        this.psmApi = psmApi;
     }
 
     @PostConstruct
@@ -172,7 +181,7 @@ public class MetricsQueryService {
         long numberOfRecords = this.getNumberOfRecords(metricExportRequest.getMetricType());
         logger.info("Number of records for metric type {} is {}", metricExportRequest.getMetricType(), numberOfRecords);
         if (numberOfRecords == 0) {
-            throw new MetricsQueryServiceException("No records found for metric type %s".formatted(metricExportRequest.getMetricType()));
+            this.logger.warn("No records found for metric type %s".formatted(metricExportRequest.getMetricType()));
         }
         String filename = metricExportRequest.getMetricType() + "-" + UUID.randomUUID() + ".csv";
         MetricExport metricExport = MetricExport.builder()
@@ -181,14 +190,16 @@ public class MetricsQueryService {
                 .filename(filename)
                 .build();
         metricExport.setUrl(pulceoLBEndpoint + "/api/v1/metric-exports/" + metricExport.getUuid() + "/blobs/" + filename);
-        MetricExport savedMetricExport = this.metricExportRepository.save(metricExport);
+        return this.metricExportRepository.save(metricExport);
+    }
+
+    public void queueForScheduling(long metricExportId) throws MetricsQueryServiceException {
         try {
-            this.metricExportQueue.put(savedMetricExport.getId());
+            this.metricExportQueue.put(metricExportId);
         } catch (InterruptedException e) {
             logger.error("Could not put metric export in queue", e);
             throw new MetricsQueryServiceException("Could not put metric export in queue!", e);
         }
-        return savedMetricExport;
     }
 
     public List<MetricExport> readAllMetricExports() {
@@ -202,6 +213,7 @@ public class MetricsQueryService {
     }
 
     private void getMeasurementAsCSV(MetricType measurement, String filename) throws InterruptedException, IOException, MetricsQueryServiceException {
+        this.logger.info("Getting measurement metricType={} as CSV", measurement);
         QueryApi queryApi = influxDBClient.getQueryApi();
         String influxQuery = resolveInfluxQuery(measurement);
         long numberOfMeasurements = this.getNumberOfRecords(measurement);
@@ -213,7 +225,7 @@ public class MetricsQueryService {
                 try {
                     writer.write(line);
                     writer.newLine();
-                    if (count.incrementAndGet() == numberOfMeasurements) {
+                    if (count.getAndIncrement() == numberOfMeasurements) {
                         countDownLatch.countDown();
                         cancellable.cancel();
                     }
@@ -223,7 +235,21 @@ public class MetricsQueryService {
             });
             countDownLatch.await(); // wait for influxdb thread to finish
             logger.info("{} successfully written", filename);
+        } catch (IOException e) {
+            logger.error("Could not write {}!", filename, e);
+            throw new MetricsQueryServiceException("Could not write %s!".formatted(filename), e);
+        } catch (InterruptedException e) {
+            logger.error("Could not wait for influxdb thread to finish", e);
+            throw new MetricsQueryServiceException("Could not wait for influxdb thread to finish", e);
         }
+
+        /* Save to pulceo data dir */
+        // get the current orchestration-context, maybe remove this, because already set?
+        OrchestrationContextFromPsmDTO orchestrationContextFromPsmDTO = this.psmApi.getOrchestrationContext();
+        // ensure directories are created
+        this.createDirsForOrchestrationData(UUID.fromString(orchestrationContextFromPsmDTO.getUuid()));
+        // write to the file
+        Files.copy(Path.of(this.pmsDatDir, filename), Path.of(this.pulceoDataDir, "raw", orchestrationContextFromPsmDTO.getUuid(), measurement + ".csv"), StandardCopyOption.REPLACE_EXISTING);
     }
 
     private String resolveInfluxQuery(MetricType measurement) {
@@ -243,6 +269,18 @@ public class MetricsQueryService {
         }
     }
 
+    private void createDirsForOrchestrationData(UUID orchestrationUUID) {
+        logger.info("Creating directories for orchestration data with uuid={}", orchestrationUUID);
+        try {
+            Files.createDirectories(Path.of(this.pulceoDataDir, "raw", orchestrationUUID.toString()));
+            Files.createDirectories(Path.of(this.pulceoDataDir, "plots", orchestrationUUID.toString()));
+            Files.createDirectories(Path.of(this.pulceoDataDir, "latex", orchestrationUUID.toString()));
+            Files.createDirectories(Path.of(this.pulceoDataDir, "reports", orchestrationUUID.toString()));
+        } catch (IOException e) {
+            logger.error("Could not create directories for orchestration data", e);
+        }
+    }
+
     private long getNumberOfRecords(MetricType measurement) throws MetricsQueryServiceException {
         QueryApi queryApi = influxDBClient.getQueryApi();
         String influxQuery = InfluxQueryBuilder.queryMeasurementCount(bucket, measurement.toString());
@@ -257,6 +295,10 @@ public class MetricsQueryService {
                 }
             }
         }
-        throw new MetricsQueryServiceException("Measurement %s not found!".formatted(measurement));
+        return 0;
+    }
+
+    public void reset() {
+        this.metricExportRepository.deleteAll();
     }
 }

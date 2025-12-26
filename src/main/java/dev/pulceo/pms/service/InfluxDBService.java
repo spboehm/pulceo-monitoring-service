@@ -3,10 +3,9 @@ package dev.pulceo.pms.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.influxdb.client.InfluxDBClient;
-import com.influxdb.client.InfluxDBClientFactory;
-import com.influxdb.client.QueryApi;
-import com.influxdb.client.WriteApiBlocking;
+import com.influxdb.client.*;
+import com.influxdb.client.domain.Bucket;
+import com.influxdb.client.domain.Organization;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
 import dev.pulceo.pms.dto.metrics.NodeLinkMetricDTO;
@@ -30,6 +29,7 @@ import org.springframework.messaging.support.GenericMessage;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -54,29 +54,20 @@ public class InfluxDBService {
     private String influxDBUrl;
 
     private final BlockingQueue<Message<?>> mqttBlockingQueue;
-
     private final BlockingQueue<Message<?>> mqttBlockingQueueEvent;
-
     private final BlockingQueue<Message<?>> mqttBlockingQueueRequest;
-
     private final BlockingQueue<Message<?>> mqttBlockingQueueTask;
-
     private final AtomicBoolean atomicBoolean = new AtomicBoolean(true);
-
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
-
     private final SimpMessagingTemplate simpMessagingTemplate;
-
     private final ConcurrentHashMap<UUID, MetricRequest> metricRequests = new ConcurrentHashMap<>();
-
     private final ObjectMapper objectMapper = new ObjectMapper();
-
     private final NodeMetricRepository nodeMetricRepository;
-
     private final NodeLinkMetricRepository nodeLinkMetricRepository;
+    private final OrchestrationContextService orchestrationContextService;
 
     @Autowired
-    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent, BlockingQueue<Message<?>> mqttBlockingQueueRequest, BlockingQueue<Message<?>> mqttBlockingQueueTask) {
+    public InfluxDBService(BlockingQueue<Message<?>> mqttBlockingQueue, ThreadPoolTaskExecutor threadPoolTaskExecutor, SimpMessagingTemplate simpMessagingTemplate, NodeLinkMetricRepository nodeLinkMetricRepository, NodeMetricRepository nodeMetricRepository, BlockingQueue<Message<?>> mqttBlockingQueueEvent, BlockingQueue<Message<?>> mqttBlockingQueueRequest, BlockingQueue<Message<?>> mqttBlockingQueueTask, OrchestrationContextService orchestrationContextService) {
         this.mqttBlockingQueue = mqttBlockingQueue;
         this.threadPoolTaskExecutor = threadPoolTaskExecutor;
         this.simpMessagingTemplate = simpMessagingTemplate;
@@ -85,10 +76,12 @@ public class InfluxDBService {
         this.mqttBlockingQueueEvent = mqttBlockingQueueEvent;
         this.mqttBlockingQueueRequest = mqttBlockingQueueRequest;
         this.mqttBlockingQueueTask = mqttBlockingQueueTask;
+        this.orchestrationContextService = orchestrationContextService;
     }
 
     @PostConstruct
     private void postConstruct() {
+        this.createInfluxDbBucketIfNotExists();
         threadPoolTaskExecutor.submit(this::listenForMetrics);
         threadPoolTaskExecutor.submit(this::listenForEvents);
         threadPoolTaskExecutor.submit(this::listenForRequests);
@@ -119,7 +112,7 @@ public class InfluxDBService {
                     // otherwise process workload
                     String payLoadAsJson = (String) message.getPayload();
                     JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
-                    writeApi.writePoints(JsonToInfluxDataConverter.convertTaskStatusLog(jsonNode.toString()));
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertTaskStatusLog(jsonNode.toString(), this.orchestrationContextService.getOrchestrationContext()));
                     logger.info("Successfully wrote task status log to InfluxDB: " + payLoadAsJson);
                 } catch (InterruptedException e) {
                     logger.info("InfluxDBService received termination signal...shutdown initiated");
@@ -147,7 +140,7 @@ public class InfluxDBService {
                     // otherwise process workload
                     String payLoadAsJson = (String) message.getPayload();
                     JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
-                    writeApi.writePoints(JsonToInfluxDataConverter.convertRequest(jsonNode.toString()));
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertRequest(jsonNode.toString(), this.orchestrationContextService.getOrchestrationContext()));
                     logger.info("Successfully wrote request to InfluxDB: " + payLoadAsJson);
                 } catch (InterruptedException e) {
                     logger.info("InfluxDBService received termination signal...shutdown initiated");
@@ -175,7 +168,7 @@ public class InfluxDBService {
                     // otherwise process workload
                     String payLoadAsJson = (String) message.getPayload();
                     JsonNode jsonNode = this.objectMapper.readTree(payLoadAsJson);
-                    writeApi.writePoints(JsonToInfluxDataConverter.convertEvent(jsonNode.toString()));
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertEvent(jsonNode.toString(), this.orchestrationContextService.getOrchestrationContext()));
                     logger.info("Successfully wrote event to InfluxDB: " + payLoadAsJson);
                 } catch (InterruptedException e) {
                     this.atomicBoolean.set(false);
@@ -201,7 +194,7 @@ public class InfluxDBService {
                     }
                     // otherwise process workload
                     String payLoadAsJson = (String) message.getPayload();
-                    writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson));
+                    writeApi.writePoints(JsonToInfluxDataConverter.convertMetric(payLoadAsJson, this.orchestrationContextService.getOrchestrationContext()));
                     logger.info("Successfully wrote message to InfluxDB: " + payLoadAsJson);
                     // TODO: check for running metric-requests, send raw data
                     JsonNode metric = this.objectMapper.readTree(payLoadAsJson);
@@ -364,4 +357,47 @@ public class InfluxDBService {
         logger.info("Notified about a new metric request: " + metricRequest.getUuid());
         this.metricRequests.put(metricRequest.getRemoteMetricRequestUUID(), metricRequest);
     }
+
+    public void reset() {
+        this.nodeLinkMetricRepository.deleteAll();
+        this.nodeMetricRepository.deleteAll();
+        this.metricRequests.clear();
+
+        try (InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org, bucket)) {
+            DeleteApi deleteApi = influxDBClient.getDeleteApi();
+            OffsetDateTime start = OffsetDateTime.parse("1970-01-01T00:00:00Z");
+            OffsetDateTime stop = OffsetDateTime.now();
+            deleteApi.delete(start, stop, "", bucket, org);
+            this.logger.info("Successfully wiped the bucket: " + bucket);
+        } catch (Exception e) {
+            this.logger.error("Error while deleting data from InfluxDB: " + e.getMessage());
+        }
+    }
+
+    private void createInfluxDbBucketIfNotExists() {
+        try (InfluxDBClient influxDBClient = InfluxDBClientFactory.create(influxDBUrl, token.toCharArray(), org)) {
+            OrganizationsApi organizationsApi = influxDBClient.getOrganizationsApi();
+            Organization organization = organizationsApi.findOrganizations()
+                    .stream()
+                    .filter(o -> o.getName().equals(org))
+                    .findFirst()
+                    .orElse(null);
+            if (organization == null) {
+                throw new RuntimeException("Organization not found: " + org);
+            }
+            BucketsApi bucketsApi = influxDBClient.getBucketsApi();
+            Bucket searchedBucket = bucketsApi.findBucketByName(bucket);
+            if (searchedBucket == null) {
+                // create bucket
+                Bucket bucketCreated = bucketsApi.createBucket(bucket, organization.getId());
+                logger.info("Created InfluxDB bucket: " + bucketCreated.getName());
+            } else {
+                logger.info("InfluxDB bucket already exists: " + searchedBucket);
+            }
+        } catch (Exception e) {
+            logger.error("Error while creating InfluxDB bucket: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
 }

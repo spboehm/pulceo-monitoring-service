@@ -58,6 +58,28 @@ tasks.register("bootRun-pms-dev") {
 	finalizedBy("bootRun")
 }
 
+tasks.register("bootRun-pms-dev-mqtt-public") {
+    group = "application"
+    description = "Runs pms with the dev-mqtt-public profile"
+    doFirst {
+        tasks.bootRun.configure {
+            systemProperty("spring.profiles.active", "dev-mqtt-public")
+        }
+    }
+    finalizedBy("bootRun")
+}
+
+tasks.register("bootRun-pms-mqtt-public") {
+    group = "application"
+    description = "Runs pms with the mqtt-public profile"
+    doFirst {
+        tasks.bootRun.configure {
+            systemProperty("spring.profiles.active", "mqtt-public")
+        }
+    }
+    finalizedBy("bootRun")
+}
+
 test {
 	useJUnitPlatform()
 }
